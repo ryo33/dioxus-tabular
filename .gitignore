@@ -10,3 +10,5 @@ target/
 
 !README.md
 !LICENSE
+
+!.vscode/settings.json

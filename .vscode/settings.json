@@ -1,0 +1,3 @@
+{
+	"rust-analyzer.cargo.features": ["export", "dioxus/desktop", "dioxus/launch"]
+}
