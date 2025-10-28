@@ -1,0 +1,12 @@
+*
+!*/
+!.gitignore
+
+target/
+
+!Cargo.toml
+!src/**/*.rs
+!examples/**/*.rs
+
+!README.md
+!LICENSE
