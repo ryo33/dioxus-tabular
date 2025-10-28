@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{Columns, Row};
+use std::marker::PhantomData;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum SortDirection {
@@ -69,6 +70,62 @@ impl<C> TableContext<C> {
             columns,
         }
     }
+
+    pub fn table_data<R>(self, rows: ReadOnlySignal<Vec<R>>) -> TableData<C, R>
+    where
+        C: Columns<R>,
+        R: Row,
+    {
+        TableData {
+            context: self,
+            rows,
+        }
+    }
+
+    fn get_column_order(&self) -> Vec<usize> {
+        self.data.get_column_order()
+    }
+
+    pub fn headers<R>(self) -> impl Iterator<Item = HeaderData<C, R>>
+    where
+        C: Columns<R>,
+        R: Row,
+    {
+        let order = self.get_column_order();
+        order.into_iter().map(move |column_index| HeaderData {
+            context: self,
+            column_index,
+            _phantom: PhantomData,
+        })
+    }
+
+    pub fn cells<R>(self, row: RowData<C, R>) -> impl Iterator<Item = CellData<C, R>>
+    where
+        C: Columns<R>,
+        R: Row,
+    {
+        let order = self.get_column_order();
+        let row_copy = row;
+        order.into_iter().map(move |column_index| CellData {
+            row: row_copy,
+            column_index,
+        })
+    }
+
+    pub fn rows<R>(self, rows: ReadOnlySignal<Vec<R>>) -> impl Iterator<Item = RowData<C, R>>
+    where
+        C: Columns<R>,
+        R: Row,
+    {
+        // TODO: apply filters and sorts
+        let len = rows.read().len();
+        (0..len).map(move |i| RowData {
+            context: self,
+            rows,
+            index: i,
+            _phantom: PhantomData,
+        })
+    }
 }
 
 impl TableContextData {
@@ -78,6 +135,19 @@ impl TableContextData {
             column,
         }
     }
+
+    pub fn get_column_order(&self) -> Vec<usize> {
+        if let Some(order) = self.override_order.read().as_ref() {
+            order.clone()
+        } else {
+            (0..self.column_names.read().len()).collect()
+        }
+    }
+
+    pub fn get_column_name(&self, index: usize) -> String {
+        self.column_names.read()[index].clone()
+    }
+
     pub fn request_sort(&self, column: usize, sort: SortGesture) {
         match sort {
             SortGesture::Cancel => {
@@ -118,5 +188,92 @@ impl ColumnContext {
             .read()
             .iter()
             .position(|record| record.column == self.column)
+    }
+}
+
+#[derive(Copy, Clone, PartialEq)]
+pub struct HeaderData<C: Columns<R>, R: Row> {
+    context: TableContext<C>,
+    column_index: usize,
+    _phantom: PhantomData<R>,
+}
+
+impl<C: Columns<R>, R: Row> HeaderData<C, R> {
+    pub fn key(&self) -> String {
+        self.context.data.get_column_name(self.column_index)
+    }
+
+    pub fn render(&self, attributes: Vec<Attribute>) -> Element {
+        let binding = self.context.columns.read();
+        let headers = binding.headers();
+        headers[self.column_index](&self.context, attributes)
+    }
+}
+
+#[derive(PartialEq)]
+pub struct TableData<C: Columns<R>, R: Row> {
+    pub context: TableContext<C>,
+    pub rows: ReadOnlySignal<Vec<R>>,
+}
+
+impl<C: Columns<R>, R: Row> Clone for TableData<C, R> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<C: Columns<R>, R: Row> Copy for TableData<C, R> {}
+
+impl<C: Columns<R>, R: Row> TableData<C, R> {
+    pub fn rows(&self) -> impl Iterator<Item = RowData<C, R>> {
+        self.context.rows(self.rows)
+    }
+}
+
+#[derive(Copy, Clone, PartialEq)]
+pub struct CellData<C: Columns<R>, R: Row> {
+    row: RowData<C, R>,
+    column_index: usize,
+}
+
+impl<C: Columns<R>, R: Row> CellData<C, R> {
+    pub fn key(&self) -> String {
+        self.row.context.data.get_column_name(self.column_index)
+    }
+
+    pub fn render(&self, attributes: Vec<Attribute>) -> Element {
+        let binding = self.row.context.columns.read();
+        let columns = binding.columns();
+        columns[self.column_index](
+            &self.row.context,
+            &self.row.rows.read()[self.row.index],
+            attributes,
+        )
+    }
+}
+
+#[derive(PartialEq)]
+pub struct RowData<C: Columns<R>, R: Row> {
+    pub(crate) context: TableContext<C>,
+    pub(crate) rows: ReadOnlySignal<Vec<R>>,
+    pub(crate) index: usize,
+    pub(crate) _phantom: PhantomData<R>,
+}
+
+impl<C: Columns<R>, R: Row> Copy for RowData<C, R> {}
+
+impl<C: Columns<R>, R: Row> Clone for RowData<C, R> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<C: Columns<R>, R: Row> RowData<C, R> {
+    pub fn key(&self) -> String {
+        self.rows.read()[self.index].key().into()
+    }
+
+    pub fn cells(self) -> impl Iterator<Item = CellData<C, R>> {
+        self.context.cells(self)
     }
 }
