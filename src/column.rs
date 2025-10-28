@@ -6,7 +6,7 @@ pub trait TableColumn<R: Row>: Clone + PartialEq + 'static {
     fn column_name(&self) -> String;
     /// Serialize the column value for export feature.
     fn serialize(&self, row: &R) -> String;
-    fn render_header(&self, context: ColumnContext) -> Element;
+    fn render_header(&self, context: ColumnContext, attributes: Vec<Attribute>) -> Element;
     fn render_cell(&self, context: ColumnContext, row: &R, attributes: Vec<Attribute>) -> Element;
     fn filter(&self, row: &R) -> bool {
         let _ = row;

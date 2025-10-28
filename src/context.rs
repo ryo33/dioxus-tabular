@@ -1,5 +1,7 @@
 use dioxus::prelude::*;
 
+use crate::{Columns, Row};
+
 #[derive(Clone, Copy, PartialEq)]
 pub enum SortDirection {
     Ascending,
@@ -25,31 +27,55 @@ pub struct SortRecord {
 }
 
 #[derive(Clone, Copy, PartialEq)]
-pub struct TableContext {
+pub(crate) struct TableContextData {
     sorts: Signal<Vec<SortRecord>>,
     // The columns names of the table.
-    columns: Signal<Vec<String>>,
+    column_names: Signal<Vec<String>>,
     // If exists, the order of the columns is overridden by this order. It's ok to hide some columns, but must not have duplicates.
     override_order: Signal<Option<Vec<usize>>>,
 }
 
-impl TableContext {
-    pub fn use_table_context(column_names: Vec<String>) -> Self {
+#[derive(PartialEq)]
+pub struct TableContext<C: 'static> {
+    pub(crate) data: TableContextData,
+    /// Does not need to be Signal, but for Copy trait.
+    pub(crate) columns: Signal<C>,
+}
+
+impl<C: 'static> Copy for TableContext<C> {}
+
+impl<C: 'static> Clone for TableContext<C> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<C> TableContext<C> {
+    pub fn use_table_context<R>(columns: C) -> Self
+    where
+        C: Columns<R>,
+        R: Row,
+    {
         let sorts = use_signal(Vec::new);
-        debug_assert!(
-            column_names.len()
-                == column_names
-                    .iter()
-                    .collect::<std::collections::HashSet<_>>()
-                    .len(),
-            "Column names must be unique"
-        );
-        let columns = use_signal(|| column_names);
+        let column_names = use_signal(|| columns.column_names());
         let override_order = use_signal(|| None);
+        let columns = use_signal(|| columns);
         Self {
-            sorts,
+            data: TableContextData {
+                sorts,
+                column_names,
+                override_order,
+            },
             columns,
-            override_order,
+        }
+    }
+}
+
+impl TableContextData {
+    pub fn column_context(&self, column: usize) -> ColumnContext {
+        ColumnContext {
+            table_context: *self,
+            column,
         }
     }
     pub fn request_sort(&self, column: usize, sort: SortGesture) {
@@ -72,18 +98,11 @@ impl TableContext {
             }
         }
     }
-
-    pub fn column_context(&self, column: usize) -> ColumnContext {
-        ColumnContext {
-            table_context: *self,
-            column,
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq)]
 pub struct ColumnContext {
-    table_context: TableContext,
+    table_context: TableContextData,
     column: usize,
 }
 

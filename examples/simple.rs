@@ -43,9 +43,9 @@ impl<R: Row + GetRowData<Id>> TableColumn<R> for IdColumn {
         row.get().0
     }
 
-    fn render_header(&self, _context: ColumnContext) -> Element {
+    fn render_header(&self, _context: ColumnContext, attributes: Vec<Attribute>) -> Element {
         rsx! {
-            th { "ID" }
+            th { ..attributes,"ID" }
         }
     }
     fn render_cell(&self, _context: ColumnContext, row: &R, attributes: Vec<Attribute>) -> Element {
@@ -73,9 +73,9 @@ impl<R: Row + GetRowData<Name>> TableColumn<R> for NameColumn {
     fn serialize(&self, row: &R) -> String {
         row.get().0
     }
-    fn render_header(&self, _context: ColumnContext) -> Element {
+    fn render_header(&self, _context: ColumnContext, attributes: Vec<Attribute>) -> Element {
         rsx! {
-            th { "Name" }
+            th { ..attributes,"Name" }
         }
     }
     fn render_cell(&self, _context: ColumnContext, row: &R, attributes: Vec<Attribute>) -> Element {
@@ -93,16 +93,18 @@ impl<R: Row + GetRowData<Name>> TableColumn<R> for NameColumn {
 
 #[component]
 pub fn Table<R: Row, C: Columns<R>>(rows: ReadOnlySignal<Vec<R>>, columns: C) -> Element {
-    let table_context = TableContext::use_table_context(columns.column_names());
+    let data = use_tabular(columns, rows);
     rsx! {
         table {
             thead {
-                tr { {columns.render_headers(table_context)} }
+                tr {
+                    TableHeaders { data }
+                }
             }
             tbody {
-                for row in rows.iter() {
-                    tr { key: "{row.key().into()}",
-                        {columns.render_columns(table_context, &row, vec![])}
+                for row in data.rows() {
+                    tr { key: "{row.key()}",
+                        TableCells { row }
                     }
                 }
             }
