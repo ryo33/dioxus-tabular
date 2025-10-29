@@ -117,9 +117,45 @@ impl<C> TableContext<C> {
         C: Columns<R>,
         R: Row,
     {
-        // TODO: apply filters and sorts
-        let len = rows.read().len();
-        (0..len).map(move |i| RowData {
+        let rows_data = rows.read();
+        let columns = self.columns.read();
+
+        // Step 1: Apply filter - collect indices of rows that pass the filter
+        let mut filtered_indices: Vec<usize> = (0..rows_data.len())
+            .filter(|&i| columns.filter(&rows_data[i]))
+            .collect();
+
+        // Step 2: Apply sort if any sort records exist
+        let sort_records = self.data.sorts.read();
+        if !sort_records.is_empty() {
+            let comparators = columns.compare();
+
+            // Sort the filtered indices based on multi-column sort priority
+            filtered_indices.sort_by(|&a, &b| {
+                // Iterate through sort records in priority order
+                for sort_record in sort_records.iter() {
+                    let ordering = comparators[sort_record.column](&rows_data[a], &rows_data[b]);
+
+                    // Apply direction (ascending or descending)
+                    let directed_ordering = match sort_record.sort.direction {
+                        SortDirection::Ascending => ordering,
+                        SortDirection::Descending => ordering.reverse(),
+                    };
+
+                    // If not equal, return this ordering
+                    if directed_ordering != std::cmp::Ordering::Equal {
+                        return directed_ordering;
+                    }
+                    // If equal, continue to next sort column
+                }
+
+                // All sort columns are equal, maintain stable sort
+                std::cmp::Ordering::Equal
+            });
+        }
+
+        // Step 3: Return iterator over sorted and filtered indices
+        filtered_indices.into_iter().map(move |i| RowData {
             context: self,
             rows,
             index: i,
@@ -280,3 +316,6 @@ impl<C: Columns<R>, R: Row> RowData<C, R> {
 
 #[cfg(test)]
 mod tests_sort_request;
+
+#[cfg(test)]
+mod tests_rows_filter_and_sort;
