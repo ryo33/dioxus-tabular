@@ -10,41 +10,41 @@ pub trait Columns<R: Row>: Clone + PartialEq + 'static {
     fn compare(&self) -> Vec<Box<dyn Fn(&R, &R) -> std::cmp::Ordering + '_>>;
 }
 
-impl<A: TableColumn<R>, B: TableColumn<R>, R: Row> Columns<R> for (A, B) {
-    fn column_names(&self) -> Vec<String> {
-        vec![self.0.column_name(), self.1.column_name()]
-    }
-    fn headers(&self) -> Vec<Box<dyn Fn(&TableContext<Self>, Vec<Attribute>) -> Element + '_>> {
-        vec![
-            Box::new(move |context, attributes| {
-                self.0
-                    .render_header(context.data.column_context(0), attributes)
-            }),
-            Box::new(move |context, attributes| {
-                self.1
-                    .render_header(context.data.column_context(1), attributes)
-            }),
-        ]
-    }
-    fn columns(&self) -> Vec<Box<dyn Fn(&TableContext<Self>, &R, Vec<Attribute>) -> Element + '_>> {
-        vec![
-            Box::new(move |context, row, attributes| {
-                self.0
-                    .render_cell(context.data.column_context(0), row, attributes.clone())
-            }),
-            Box::new(move |context, row, attributes| {
-                self.1
-                    .render_cell(context.data.column_context(1), row, attributes)
-            }),
-        ]
-    }
-    fn filter(&self, row: &R) -> bool {
-        self.0.filter(row) && self.1.filter(row)
-    }
-    fn compare(&self) -> Vec<Box<dyn Fn(&R, &R) -> std::cmp::Ordering + '_>> {
-        vec![
-            Box::new(move |a, b| self.0.compare(a, b)),
-            Box::new(move |a, b| self.1.compare(a, b)),
-        ]
+macro_rules! columns {
+    ($($number:tt => $column:ident),*) => {
+        impl<$($column: TableColumn<R>),*, R: Row> Columns<R> for ($($column),*,) {
+            fn column_names(&self) -> Vec<String> {
+                vec![$(self.$number.column_name()),*]
+            }
+            fn headers(&self) -> Vec<Box<dyn Fn(&TableContext<Self>, Vec<Attribute>) -> Element + '_>> {
+                vec![$(Box::new(move |context, attributes| {
+                    self.$number.render_header(context.data.column_context($number), attributes)
+                })),*]
+            }
+            fn columns(&self) -> Vec<Box<dyn Fn(&TableContext<Self>, &R, Vec<Attribute>) -> Element + '_>> {
+                vec![$(Box::new(move |context, row, attributes| {
+                    self.$number.render_cell(context.data.column_context($number), row, attributes)
+                })),*]
+            }
+            fn filter(&self, row: &R) -> bool {
+                $(self.$number.filter(row) &&)* true
+            }
+            fn compare(&self) -> Vec<Box<dyn Fn(&R, &R) -> std::cmp::Ordering + '_>> {
+                vec![$(Box::new(move |a, b| self.$number.compare(a, b))),*]
+            }
+        }
     }
 }
+
+columns!(0 => A);
+columns!(0 => A, 1 => B);
+columns!(0 => A, 1 => B, 2 => C);
+columns!(0 => A, 1 => B, 2 => C, 3 => D);
+columns!(0 => A, 1 => B, 2 => C, 3 => D, 4 => E);
+columns!(0 => A, 1 => B, 2 => C, 3 => D, 4 => E, 5 => F);
+columns!(0 => A, 1 => B, 2 => C, 3 => D, 4 => E, 5 => F, 6 => G);
+columns!(0 => A, 1 => B, 2 => C, 3 => D, 4 => E, 5 => F, 6 => G, 7 => H);
+columns!(0 => A, 1 => B, 2 => C, 3 => D, 4 => E, 5 => F, 6 => G, 7 => H, 8 => I);
+columns!(0 => A, 1 => B, 2 => C, 3 => D, 4 => E, 5 => F, 6 => G, 7 => H, 8 => I, 9 => J);
+columns!(0 => A, 1 => B, 2 => C, 3 => D, 4 => E, 5 => F, 6 => G, 7 => H, 8 => I, 9 => J, 10 => K);
+columns!(0 => A, 1 => B, 2 => C, 3 => D, 4 => E, 5 => F, 6 => G, 7 => H, 8 => I, 9 => J, 10 => K, 11 => L);
