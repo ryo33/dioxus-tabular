@@ -16,6 +16,9 @@ dioxus = { version = "0.6.3", default-features = false, features = [
   "signals",
 ] }
 
+[dev-dependencies]
+futures = "0.3"
+
 [features]
 default = []
 export = []

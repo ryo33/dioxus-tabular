@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{Columns, Row};
 use std::marker::PhantomData;
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum SortDirection {
     Ascending,
     Descending,
@@ -277,3 +277,6 @@ impl<C: Columns<R>, R: Row> RowData<C, R> {
         self.context.cells(self)
     }
 }
+
+#[cfg(test)]
+mod tests;
