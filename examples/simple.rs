@@ -39,10 +39,6 @@ impl<R: Row + GetRowData<Id>> TableColumn<R> for IdColumn {
         "id".into()
     }
 
-    fn serialize(&self, row: &R) -> String {
-        row.get().0
-    }
-
     fn render_header(&self, _context: ColumnContext, attributes: Vec<Attribute>) -> Element {
         rsx! {
             th { ..attributes,"ID" }
@@ -70,9 +66,7 @@ impl<R: Row + GetRowData<Name>> TableColumn<R> for NameColumn {
     fn column_name(&self) -> String {
         "name".into()
     }
-    fn serialize(&self, row: &R) -> String {
-        row.get().0
-    }
+
     fn render_header(&self, _context: ColumnContext, attributes: Vec<Attribute>) -> Element {
         rsx! {
             th { ..attributes,"Name" }

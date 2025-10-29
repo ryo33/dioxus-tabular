@@ -150,10 +150,6 @@ impl<R: Row + GetRowData<Title>> TableColumn<R> for TitleColumn {
         "title".into()
     }
 
-    fn serialize(&self, row: &R) -> String {
-        row.get().0
-    }
-
     fn render_header(&self, context: ColumnContext, attributes: Vec<Attribute>) -> Element {
         let mut filter_signal = self.filter;
 
@@ -215,10 +211,6 @@ impl PriorityColumn {
 impl<R: Row + GetRowData<TaskPriority>> TableColumn<R> for PriorityColumn {
     fn column_name(&self) -> String {
         "priority".into()
-    }
-
-    fn serialize(&self, row: &R) -> String {
-        row.get().0.as_str().to_string()
     }
 
     fn render_header(&self, context: ColumnContext, attributes: Vec<Attribute>) -> Element {
@@ -288,10 +280,6 @@ impl<R: Row + GetRowData<TaskStatus>> TableColumn<R> for StatusColumn {
         "status".into()
     }
 
-    fn serialize(&self, row: &R) -> String {
-        row.get().0.as_str().to_string()
-    }
-
     fn render_header(&self, context: ColumnContext, attributes: Vec<Attribute>) -> Element {
         let mut filter_signal = self.filter;
 
@@ -356,10 +344,6 @@ impl DaysColumn {
 impl<R: Row + GetRowData<DaysUntil>> TableColumn<R> for DaysColumn {
     fn column_name(&self) -> String {
         "days_until".into()
-    }
-
-    fn serialize(&self, row: &R) -> String {
-        row.get().0.to_string()
     }
 
     fn render_header(&self, context: ColumnContext, attributes: Vec<Attribute>) -> Element {

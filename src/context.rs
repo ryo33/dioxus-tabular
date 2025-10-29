@@ -341,8 +341,8 @@ impl ColumnContext {
 
 #[derive(Copy, Clone, PartialEq)]
 pub struct HeaderData<C: Columns<R>, R: Row> {
-    context: TableContext<C>,
-    column_index: usize,
+    pub(crate) context: TableContext<C>,
+    pub(crate) column_index: usize,
     _phantom: PhantomData<R>,
 }
 
@@ -380,8 +380,8 @@ impl<C: Columns<R>, R: Row> TableData<C, R> {
 
 #[derive(Copy, Clone, PartialEq)]
 pub struct CellData<C: Columns<R>, R: Row> {
-    row: RowData<C, R>,
-    column_index: usize,
+    pub(crate) row: RowData<C, R>,
+    pub(crate) column_index: usize,
 }
 
 impl<C: Columns<R>, R: Row> CellData<C, R> {
