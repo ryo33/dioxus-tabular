@@ -3,6 +3,9 @@ use dioxus::prelude::*;
 use crate::{Columns, Row};
 use std::marker::PhantomData;
 
+mod column_order;
+pub use column_order::ColumnOrder;
+
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum SortDirection {
     Ascending,
@@ -32,8 +35,8 @@ pub(crate) struct TableContextData {
     sorts: Signal<Vec<SortRecord>>,
     // The columns names of the table.
     column_names: Signal<Vec<String>>,
-    // If exists, the order of the columns is overridden by this order. It's ok to hide some columns, but must not have duplicates.
-    override_order: Signal<Option<Vec<usize>>>,
+    // Manages the order and visibility of columns.
+    column_order: Signal<ColumnOrder>,
 }
 
 #[derive(PartialEq)]
@@ -59,13 +62,14 @@ impl<C> TableContext<C> {
     {
         let sorts = use_signal(Vec::new);
         let column_names = use_signal(|| columns.column_names());
-        let override_order = use_signal(|| None);
+        let total_columns = column_names.read().len();
+        let column_order = use_signal(|| ColumnOrder::new(total_columns));
         let columns = use_signal(|| columns);
         Self {
             data: TableContextData {
                 sorts,
                 column_names,
-                override_order,
+                column_order,
             },
             columns,
         }
@@ -173,11 +177,7 @@ impl TableContextData {
     }
 
     pub fn get_column_order(&self) -> Vec<usize> {
-        if let Some(order) = self.override_order.read().as_ref() {
-            order.clone()
-        } else {
-            (0..self.column_names.read().len()).collect()
-        }
+        self.column_order.read().get_order().to_vec()
     }
 
     pub fn get_column_name(&self, index: usize) -> String {
@@ -204,6 +204,51 @@ impl TableContextData {
             }
         }
     }
+
+    // Column order management methods
+
+    pub fn swap_columns(&self, col_a: usize, col_b: usize) {
+        let mut signal = self.column_order;
+        signal.write().swap(col_a, col_b);
+    }
+
+    pub fn hide_column(&self, col: usize) {
+        let mut signal = self.column_order;
+        signal.write().hide_column(col);
+    }
+
+    pub fn show_column(&self, col: usize, at_index: Option<usize>) {
+        let mut signal = self.column_order;
+        signal.write().show_column(col, at_index);
+    }
+
+    pub fn move_column_to(&self, col: usize, new_index: usize) {
+        let mut signal = self.column_order;
+        signal.write().move_to(col, new_index);
+    }
+
+    pub fn move_column_forward(&self, col: usize) {
+        let mut signal = self.column_order;
+        signal.write().move_forward(col);
+    }
+
+    pub fn move_column_backward(&self, col: usize) {
+        let mut signal = self.column_order;
+        signal.write().move_backward(col);
+    }
+
+    pub fn is_column_visible(&self, col: usize) -> bool {
+        self.column_order.read().is_visible(col)
+    }
+
+    pub fn column_position(&self, col: usize) -> Option<usize> {
+        self.column_order.read().position(col)
+    }
+
+    pub fn reset_column_order(&self) {
+        let mut signal = self.column_order;
+        signal.write().reset();
+    }
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -224,6 +269,64 @@ impl ColumnContext {
             .read()
             .iter()
             .position(|record| record.column == self.column)
+    }
+
+    /// Returns the sort direction for this column, or None if no sort is applied.
+    pub fn sort_direction(&self) -> Option<SortDirection> {
+        self.table_context
+            .sorts
+            .read()
+            .iter()
+            .find(|record| record.column == self.column)
+            .map(|record| record.sort.direction)
+    }
+
+    // Column order management delegate methods
+
+    /// Swaps this column with another column in the display order.
+    pub fn swap_with(&self, other_col: usize) {
+        self.table_context.swap_columns(self.column, other_col);
+    }
+
+    /// Hides this column from the display.
+    pub fn hide(&self) {
+        self.table_context.hide_column(self.column);
+    }
+
+    /// Shows this column in the display.
+    /// If at_index is None, the column is appended to the end.
+    pub fn show(&self, at_index: Option<usize>) {
+        self.table_context.show_column(self.column, at_index);
+    }
+
+    /// Moves this column to a specific position in the display order (0-indexed).
+    pub fn move_to(&self, new_index: usize) {
+        self.table_context.move_column_to(self.column, new_index);
+    }
+
+    /// Moves this column one position forward (towards index 0).
+    pub fn move_forward(&self) {
+        self.table_context.move_column_forward(self.column);
+    }
+
+    /// Moves this column one position backward (towards the end).
+    pub fn move_backward(&self) {
+        self.table_context.move_column_backward(self.column);
+    }
+
+    /// Returns whether this column is currently visible.
+    pub fn is_visible(&self) -> bool {
+        self.table_context.is_column_visible(self.column)
+    }
+
+    /// Returns the display position of this column (0-indexed), or None if hidden.
+    pub fn position(&self) -> Option<usize> {
+        self.table_context.column_position(self.column)
+    }
+
+    /// Resets the column order to the default state (all columns visible in natural order).
+    pub fn reset_order(&self) {
+        self.table_context.reset_column_order();
     }
 }
 

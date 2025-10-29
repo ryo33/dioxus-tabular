@@ -15,6 +15,7 @@ This approach may feel a little more verbose at first, but it unlocks:
 - **Composable, type-safe column definitions**
 - **Fine-grained reactivity** (each column can hold its own state)
 - **Declarative multi-column sorting**
+- **Column reordering and visibility control**
 - **Extensible abstractions** (`Row`, `GetRowData`, `TableColumn`)
 - **Full Dioxus integration**: built with `rsx!` and `Signal` from the ground up
 
@@ -35,6 +36,36 @@ This approach may feel a little more verbose at first, but it unlocks:
 | `TableColumn`   | Describes how a single column renders, filters, and compares rows. |
 | `Columns`       | A composed collection of `TableColumn`s, implemented for tuples.   |
 | `TableContext`  | Holds tables state                                                 |
+| `ColumnOrder`   | Manages column display order and visibility                        |
+
+## Features
+
+### Multi-Column Sorting
+
+Tables support declarative multi-column sorting with priority control:
+
+- Click a column header to sort by that column
+- Sort records are maintained in priority order
+- Each column can define its own comparison logic via `TableColumn::compare()`
+
+### Row Filtering
+
+Columns can implement custom filtering logic:
+
+- Each column defines its own `TableColumn::filter()` method
+- Filters can maintain reactive state using `Signal`
+- All filters are applied automatically when rendering rows
+
+### Column Ordering and Visibility
+
+Control which columns are displayed and in what order:
+
+- **Hide/Show**: `hide_column()`, `show_column()` - Toggle column visibility
+- **Reorder**: `move_to()`, `swap_columns()` - Change column positions
+- **Navigate**: `move_forward()`, `move_backward()` - Move columns incrementally
+- **Reset**: `reset_column_order()` - Restore default order and visibility
+
+Access these methods through `TableContextData` or `ColumnContext`.
 
 ## Example scenario
 

@@ -27,7 +27,7 @@ fn test_cancel_on_empty_list() {
                     "Column 2".to_string(),
                 ]
             }),
-            override_order: use_signal(|| None),
+            column_order: use_signal(|| ColumnOrder::new(3)),
         },
         |context, proxy| match proxy.generation {
             0 => {
@@ -55,7 +55,7 @@ fn test_cancel_removes_existing_sort() {
                     "Column 2".to_string(),
                 ]
             }),
-            override_order: use_signal(|| None),
+            column_order: use_signal(|| ColumnOrder::new(3)),
         },
         |context, proxy| match proxy.generation {
             0 => {
@@ -87,7 +87,7 @@ fn test_cancel_on_column_without_sort() {
                     "Column 2".to_string(),
                 ]
             }),
-            override_order: use_signal(|| None),
+            column_order: use_signal(|| ColumnOrder::new(3)),
         },
         |context, proxy| match proxy.generation {
             0 => {
@@ -121,7 +121,7 @@ fn test_cancel_preserves_other_column_sorts() {
                     "Column 2".to_string(),
                 ]
             }),
-            override_order: use_signal(|| None),
+            column_order: use_signal(|| ColumnOrder::new(3)),
         },
         |context, proxy| match proxy.generation {
             0 => {
@@ -158,7 +158,7 @@ fn test_add_first_ascending_on_empty_list() {
                     "Column 2".to_string(),
                 ]
             }),
-            override_order: use_signal(|| None),
+            column_order: use_signal(|| ColumnOrder::new(3)),
         },
         |context, proxy| match proxy.generation {
             0 => {
@@ -189,7 +189,7 @@ fn test_add_first_replaces_existing_sort_on_same_column() {
                     "Column 2".to_string(),
                 ]
             }),
-            override_order: use_signal(|| None),
+            column_order: use_signal(|| ColumnOrder::new(3)),
         },
         |context, proxy| match proxy.generation {
             0 => {
@@ -224,7 +224,7 @@ fn test_add_first_with_multiple_columns_sorted() {
                     "Column 2".to_string(),
                 ]
             }),
-            override_order: use_signal(|| None),
+            column_order: use_signal(|| ColumnOrder::new(3)),
         },
         |context, proxy| match proxy.generation {
             0 => {
@@ -260,7 +260,7 @@ fn test_add_first_moves_column_from_last_to_first() {
                     "Column 2".to_string(),
                 ]
             }),
-            override_order: use_signal(|| None),
+            column_order: use_signal(|| ColumnOrder::new(3)),
         },
         |context, proxy| match proxy.generation {
             0 => {
@@ -298,7 +298,7 @@ fn test_add_last_ascending_on_empty_list() {
                     "Column 2".to_string(),
                 ]
             }),
-            override_order: use_signal(|| None),
+            column_order: use_signal(|| ColumnOrder::new(3)),
         },
         |context, proxy| match proxy.generation {
             0 => {
@@ -329,7 +329,7 @@ fn test_add_last_replaces_existing_sort_on_same_column() {
                     "Column 2".to_string(),
                 ]
             }),
-            override_order: use_signal(|| None),
+            column_order: use_signal(|| ColumnOrder::new(3)),
         },
         |context, proxy| match proxy.generation {
             0 => {
@@ -364,7 +364,7 @@ fn test_add_last_with_multiple_columns_sorted() {
                     "Column 2".to_string(),
                 ]
             }),
-            override_order: use_signal(|| None),
+            column_order: use_signal(|| ColumnOrder::new(3)),
         },
         |context, proxy| match proxy.generation {
             0 => {
@@ -401,7 +401,7 @@ fn test_add_last_moves_column_from_first_to_last() {
                     "Column 2".to_string(),
                 ]
             }),
-            override_order: use_signal(|| None),
+            column_order: use_signal(|| ColumnOrder::new(3)),
         },
         |context, proxy| match proxy.generation {
             0 => {
