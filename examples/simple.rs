@@ -117,17 +117,16 @@ fn app() -> Element {
         vec![
             RowData {
                 id: Id("1".to_string()),
-                name: Name("John Doe".to_string()),
+                name: Name("Ryo".to_string()),
             },
             RowData {
                 id: Id("2".to_string()),
-                name: Name("Jane Doe".to_string()),
+                name: Name("Dioxus".to_string()),
             },
         ]
     });
     rsx! {
         Table { rows, columns: (IdColumn, NameColumn) }
-        Table { rows, columns: (NameColumn, IdColumn) }
     }
 }
 
