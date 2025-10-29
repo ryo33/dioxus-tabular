@@ -279,4 +279,4 @@ impl<C: Columns<R>, R: Row> RowData<C, R> {
 }
 
 #[cfg(test)]
-mod tests;
+mod tests_sort_request;
