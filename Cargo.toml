@@ -8,6 +8,10 @@ license = "MIT OR Apache-2.0"
 name = "simple"
 required-features = ["dioxus/desktop", "dioxus/launch"]
 
+[[example]]
+name = "tasks"
+required-features = ["dioxus/desktop", "dioxus/launch"]
+
 [dependencies]
 dioxus = { version = "0.6.3", default-features = false, features = [
   "hooks",

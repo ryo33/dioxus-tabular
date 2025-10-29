@@ -17,11 +17,18 @@ pub struct Sort {
     pub direction: SortDirection,
 }
 
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub struct SortInfo {
+    pub priority: usize,
+    pub direction: SortDirection,
+}
+
 #[derive(Clone, Copy, PartialEq)]
 pub enum SortGesture {
     Cancel,
     AddFirst(Sort),
     AddLast(Sort),
+    Toggle,
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -202,6 +209,15 @@ impl TableContextData {
                 write.retain(|record| record.column != column);
                 write.push(SortRecord { column, sort });
             }
+            SortGesture::Toggle => {
+                let mut signal = self.sorts;
+                if let Some(record) = signal.write().iter_mut().find(|r| r.column == column) {
+                    record.sort.direction = match record.sort.direction {
+                        SortDirection::Ascending => SortDirection::Descending,
+                        SortDirection::Descending => SortDirection::Ascending,
+                    };
+                }
+            }
         }
     }
 
@@ -262,23 +278,16 @@ impl ColumnContext {
         self.table_context.request_sort(self.column, sort);
     }
 
-    /// Returns the position of the sort in the list of sorts, or None if no sort is applied to this column.
-    pub fn sort_number(&self) -> Option<usize> {
-        self.table_context
-            .sorts
-            .read()
+    /// Returns the sort information (priority and direction) for this column, or None if not sorted.
+    pub fn sort_info(&self) -> Option<SortInfo> {
+        let sorts = self.table_context.sorts.read();
+        sorts
             .iter()
             .position(|record| record.column == self.column)
-    }
-
-    /// Returns the sort direction for this column, or None if no sort is applied.
-    pub fn sort_direction(&self) -> Option<SortDirection> {
-        self.table_context
-            .sorts
-            .read()
-            .iter()
-            .find(|record| record.column == self.column)
-            .map(|record| record.sort.direction)
+            .map(|priority| SortInfo {
+                priority,
+                direction: sorts[priority].sort.direction,
+            })
     }
 
     // Column order management delegate methods
