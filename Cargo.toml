@@ -19,6 +19,10 @@ required-features = ["dioxus/desktop", "dioxus/launch"]
 name = "tasks"
 required-features = ["dioxus/desktop", "dioxus/launch"]
 
+[[example]]
+name = "export"
+required-features = ["dioxus/desktop", "dioxus/launch", "export"]
+
 [dependencies]
 dioxus = { version = "0.6.3", default-features = false, features = [
   "hooks",
