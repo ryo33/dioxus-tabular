@@ -3,18 +3,62 @@ use crate::Exporter;
 use crate::{Row, TableColumn, TableContext};
 use dioxus::prelude::*;
 
+/// Trait automatically implemented for tuples of [`TableColumn`]s.
+///
+/// This trait is implemented for tuples of 1 to 12 columns via macros.
+/// You don't need to implement this trait manually.
+///
+/// # Example
+///
+/// ```
+/// # use dioxus_tabular::*;
+/// # #[derive(Clone, PartialEq)]
+/// # struct Col1;
+/// # #[derive(Clone, PartialEq)]
+/// # struct Col2;
+/// # #[derive(Clone, PartialEq)]
+/// # struct User { id: u32 }
+/// # impl Row for User {
+/// #     fn key(&self) -> impl Into<String> { self.id.to_string() }
+/// # }
+/// # impl TableColumn<User> for Col1 {
+/// #     fn column_name(&self) -> String { "col1".into() }
+/// #     fn render_header(&self, _: ColumnContext, _: Vec<dioxus::prelude::Attribute>) -> dioxus::prelude::Element { todo!() }
+/// #     fn render_cell(&self, _: ColumnContext, _: &User, _: Vec<dioxus::prelude::Attribute>) -> dioxus::prelude::Element { todo!() }
+/// # }
+/// # impl TableColumn<User> for Col2 {
+/// #     fn column_name(&self) -> String { "col2".into() }
+/// #     fn render_header(&self, _: ColumnContext, _: Vec<dioxus::prelude::Attribute>) -> dioxus::prelude::Element { todo!() }
+/// #     fn render_cell(&self, _: ColumnContext, _: &User, _: Vec<dioxus::prelude::Attribute>) -> dioxus::prelude::Element { todo!() }
+/// # }
+/// // Single column
+/// let cols1 = Col1;
+///
+/// // Multiple columns (tuple)
+/// let cols2 = (Col1, Col2);
+/// ```
 #[allow(clippy::type_complexity, reason = "to provide internal API")]
 pub trait Columns<R: Row>: Clone + PartialEq + 'static {
+    /// Returns the names of all columns.
     fn column_names(&self) -> Vec<String>;
+    /// Returns header renderers for all columns.
     fn headers(&self) -> Vec<Box<dyn Fn(&TableContext<Self>, Vec<Attribute>) -> Element + '_>>;
+    /// Returns cell renderers for all columns.
     fn columns(&self) -> Vec<Box<dyn Fn(&TableContext<Self>, &R, Vec<Attribute>) -> Element + '_>>;
+    /// Returns true if the row passes all column filters.
     fn filter(&self, row: &R) -> bool;
+    /// Returns comparators for all columns.
     fn compare(&self) -> Vec<Box<dyn Fn(&R, &R) -> std::cmp::Ordering + '_>>;
 }
 
+/// Trait for columns that support serialization (export feature).
+///
+/// Automatically implemented for tuples of [`SerializableColumn`](crate::SerializableColumn)s.
 #[cfg(feature = "export")]
 pub trait SerializableColumns<R: Row>: Columns<R> {
+    /// Returns header serializers for all columns.
     fn serialize_headers(&self) -> Vec<Box<dyn Fn() -> String + '_>>;
+    /// Returns cell serializers for all columns.
     #[allow(clippy::type_complexity, reason = "to provide internal API")]
     fn serialize_cell<E: Exporter>(
         &self,

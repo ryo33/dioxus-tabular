@@ -6,28 +6,88 @@ use std::marker::PhantomData;
 mod column_order;
 pub use column_order::ColumnOrder;
 
+/// The direction of sorting.
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum SortDirection {
+    /// Sort in ascending order (A to Z, 0 to 9).
     Ascending,
+    /// Sort in descending order (Z to A, 9 to 0).
     Descending,
 }
 
+/// A sort operation with a direction.
+///
+/// # Example
+///
+/// ```
+/// use dioxus_tabular::{Sort, SortDirection};
+///
+/// let sort = Sort {
+///     direction: SortDirection::Ascending,
+/// };
+/// ```
 #[derive(Clone, Copy, PartialEq)]
 pub struct Sort {
+    /// The direction of this sort.
     pub direction: SortDirection,
 }
 
+/// Information about the current sort state of a column.
+///
+/// Returned by [`ColumnContext::sort_info`] to check if a column is currently sorted.
+///
+/// # Example
+///
+/// ```
+/// # use dioxus::prelude::*;
+/// # use dioxus_tabular::*;
+/// # fn example(context: ColumnContext) {
+/// if let Some(info) = context.sort_info() {
+///     println!("Column is sorted with priority {} in {:?} order",
+///              info.priority, info.direction);
+/// }
+/// # }
+/// ```
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct SortInfo {
+    /// The sort priority (0 = highest priority).
     pub priority: usize,
+    /// The direction of the sort.
     pub direction: SortDirection,
 }
 
+/// A user gesture to change sorting state.
+///
+/// Used with [`ColumnContext::request_sort`] to control how columns are sorted.
+///
+/// # Example
+///
+/// ```
+/// # use dioxus::prelude::*;
+/// # use dioxus_tabular::*;
+/// # fn example(context: ColumnContext) {
+/// // Add this column as primary sort
+/// context.request_sort(SortGesture::AddFirst(Sort {
+///     direction: SortDirection::Ascending,
+/// }));
+///
+/// // Toggle between ascending/descending
+/// context.request_sort(SortGesture::Toggle);
+///
+/// // Remove sort from this column
+/// context.request_sort(SortGesture::Cancel);
+/// # }
+/// ```
 #[derive(Clone, Copy, PartialEq)]
 pub enum SortGesture {
+    /// Remove sorting from this column.
     Cancel,
+    /// Add this column as the primary (first) sort, pushing others down in priority.
     AddFirst(Sort),
+    /// Add this column as the last (lowest priority) sort.
     AddLast(Sort),
+    /// Toggle the sort direction of this column (Ascending ↔ Descending).
+    /// Does nothing if the column is not currently sorted.
     Toggle,
 }
 
@@ -267,6 +327,68 @@ impl TableContextData {
     }
 }
 
+/// Context for a specific column, providing access to sorting and visibility controls.
+///
+/// This type is passed to [`TableColumn::render_header`](crate::TableColumn::render_header)
+/// and [`TableColumn::render_cell`](crate::TableColumn::render_cell),
+/// allowing columns to interact with table state.
+///
+/// # Sorting
+///
+/// - [`request_sort`](Self::request_sort): Request a sort operation
+/// - [`sort_info`](Self::sort_info): Get current sort state
+///
+/// # Column Visibility and Ordering
+///
+/// - [`hide`](Self::hide) / [`show`](Self::show): Toggle visibility
+/// - [`move_to`](Self::move_to), [`move_forward`](Self::move_forward), [`move_backward`](Self::move_backward): Reorder
+/// - [`is_visible`](Self::is_visible), [`position`](Self::position): Query state
+///
+/// # Example
+///
+/// ```
+/// # use dioxus::prelude::*;
+/// # use dioxus_tabular::*;
+/// # #[derive(Clone, PartialEq)]
+/// # struct User { id: u32 }
+/// # impl Row for User {
+/// #     fn key(&self) -> impl Into<String> { self.id.to_string() }
+/// # }
+/// # #[derive(Clone, PartialEq)]
+/// # struct Col;
+/// impl TableColumn<User> for Col {
+///     fn column_name(&self) -> String {
+///         "col".into()
+///     }
+///
+///     fn render_header(&self, context: ColumnContext, attributes: Vec<Attribute>) -> Element {
+///         rsx! {
+///             th { ..attributes,
+///                 button {
+///                     onclick: move |_| {
+///                         // Request ascending sort
+///                         context.request_sort(SortGesture::AddLast(Sort {
+///                             direction: SortDirection::Ascending,
+///                         }));
+///                     },
+///                     "Sort"
+///                 }
+///                 // Show sort indicator
+///                 if let Some(info) = context.sort_info() {
+///                     match info.direction {
+///                         SortDirection::Ascending => " ↑",
+///                         SortDirection::Descending => " ↓",
+///                     }
+///                 }
+///             }
+///         }
+///     }
+///
+///     fn render_cell(&self, _context: ColumnContext, _row: &User, _attributes: Vec<Attribute>) -> Element {
+///         rsx! { td {} }
+///     }
+/// }
+/// ```
 #[derive(Clone, Copy, PartialEq)]
 pub struct ColumnContext {
     table_context: TableContextData,
@@ -274,11 +396,35 @@ pub struct ColumnContext {
 }
 
 impl ColumnContext {
+    /// Requests a sort operation on this column.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use dioxus_tabular::*;
+    /// # fn example(context: ColumnContext) {
+    /// // Add ascending sort as primary
+    /// context.request_sort(SortGesture::AddFirst(Sort {
+    ///     direction: SortDirection::Ascending,
+    /// }));
+    /// # }
+    /// ```
     pub fn request_sort(&self, sort: SortGesture) {
         self.table_context.request_sort(self.column, sort);
     }
 
-    /// Returns the sort information (priority and direction) for this column, or None if not sorted.
+    /// Returns the sort information for this column, or `None` if not sorted.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use dioxus_tabular::*;
+    /// # fn example(context: ColumnContext) {
+    /// if let Some(info) = context.sort_info() {
+    ///     println!("Sorted with priority {}", info.priority);
+    /// }
+    /// # }
+    /// ```
     pub fn sort_info(&self) -> Option<SortInfo> {
         let sorts = self.table_context.sorts.read();
         sorts
@@ -339,6 +485,9 @@ impl ColumnContext {
     }
 }
 
+/// Data for rendering a single header cell.
+///
+/// Returned by iterating over `TableContext::headers()`. Primarily used internally.
 #[derive(Copy, Clone, PartialEq)]
 pub struct HeaderData<C: Columns<R>, R: Row> {
     pub(crate) context: TableContext<C>,
@@ -347,10 +496,12 @@ pub struct HeaderData<C: Columns<R>, R: Row> {
 }
 
 impl<C: Columns<R>, R: Row> HeaderData<C, R> {
+    /// Returns the unique key for this header.
     pub fn key(&self) -> String {
         self.context.data.get_column_name(self.column_index)
     }
 
+    /// Renders this header with the given attributes.
     pub fn render(&self, attributes: Vec<Attribute>) -> Element {
         let binding = self.context.columns.read();
         let headers = binding.headers();
@@ -358,9 +509,14 @@ impl<C: Columns<R>, R: Row> HeaderData<C, R> {
     }
 }
 
+/// The main table data structure returned by [`use_tabular`](crate::use_tabular).
+///
+/// Use this with [`TableHeaders`](crate::TableHeaders) and [`TableCells`](crate::TableCells) components.
 #[derive(PartialEq)]
 pub struct TableData<C: Columns<R>, R: Row> {
+    /// The table context (provides access to sorting/filtering state).
     pub context: TableContext<C>,
+    /// The reactive signal containing row data.
     pub rows: ReadOnlySignal<Vec<R>>,
 }
 
@@ -373,11 +529,15 @@ impl<C: Columns<R>, R: Row> Clone for TableData<C, R> {
 impl<C: Columns<R>, R: Row> Copy for TableData<C, R> {}
 
 impl<C: Columns<R>, R: Row> TableData<C, R> {
+    /// Returns an iterator over filtered and sorted rows.
     pub fn rows(&self) -> impl Iterator<Item = RowData<C, R>> {
         self.context.rows(self.rows)
     }
 }
 
+/// Data for a single cell in the table.
+///
+/// Returned by iterating over `RowData::cells()`. Primarily used internally.
 #[derive(Copy, Clone, PartialEq)]
 pub struct CellData<C: Columns<R>, R: Row> {
     pub(crate) row: RowData<C, R>,
@@ -385,10 +545,12 @@ pub struct CellData<C: Columns<R>, R: Row> {
 }
 
 impl<C: Columns<R>, R: Row> CellData<C, R> {
+    /// Returns the unique key for this cell.
     pub fn key(&self) -> String {
         self.row.context.data.get_column_name(self.column_index)
     }
 
+    /// Renders this cell with the given attributes.
     pub fn render(&self, attributes: Vec<Attribute>) -> Element {
         let binding = self.row.context.columns.read();
         let columns = binding.columns();
@@ -400,6 +562,9 @@ impl<C: Columns<R>, R: Row> CellData<C, R> {
     }
 }
 
+/// Data for a single row in the table.
+///
+/// Returned by iterating over `TableData::rows()`. Pass to [`TableCells`](crate::TableCells) component.
 #[derive(PartialEq)]
 pub struct RowData<C: Columns<R>, R: Row> {
     pub(crate) context: TableContext<C>,
@@ -417,10 +582,12 @@ impl<C: Columns<R>, R: Row> Clone for RowData<C, R> {
 }
 
 impl<C: Columns<R>, R: Row> RowData<C, R> {
+    /// Returns the unique key for this row.
     pub fn key(&self) -> String {
         self.rows.read()[self.index].key().into()
     }
 
+    /// Returns an iterator over the cells in this row.
     pub fn cells(self) -> impl Iterator<Item = CellData<C, R>> {
         self.context.cells(self)
     }

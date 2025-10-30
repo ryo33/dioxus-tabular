@@ -2,17 +2,118 @@ use crate::{CellData, Columns, HeaderData, Row, SerializableColumns, TableColumn
 use dioxus::prelude::*;
 use serde::Serialize;
 
+/// A column that can be serialized to various export formats.
+///
+/// This trait extends [`TableColumn`] with serialization capabilities.
+/// Implement this trait when you want to export table data (e.g., to CSV, JSON, Excel).
+///
+/// # Example
+///
+/// ```
+/// # use dioxus::prelude::*;
+/// # use dioxus_tabular::*;
+/// # use serde::Serialize;
+/// # #[derive(Clone, PartialEq)]
+/// # struct User { id: u32, name: String }
+/// # impl Row for User {
+/// #     fn key(&self) -> impl Into<String> { self.id.to_string() }
+/// # }
+/// # #[derive(Clone, PartialEq)]
+/// # struct UserName(String);
+/// # impl GetRowData<UserName> for User {
+/// #     fn get(&self) -> UserName { UserName(self.name.clone()) }
+/// # }
+/// #[derive(Clone, PartialEq)]
+/// struct NameColumn;
+///
+/// impl<R: Row + GetRowData<UserName>> TableColumn<R> for NameColumn {
+///     fn column_name(&self) -> String {
+///         "name".into()
+///     }
+///
+///     fn render_header(&self, _: ColumnContext, _: Vec<Attribute>) -> Element {
+///         rsx! { th { "Name" } }
+///     }
+///
+///     fn render_cell(&self, _: ColumnContext, row: &R, _: Vec<Attribute>) -> Element {
+///         rsx! { td { "{row.get().0}" } }
+///     }
+/// }
+///
+/// // Enable export by implementing SerializableColumn
+/// impl<R: Row + GetRowData<UserName>> SerializableColumn<R> for NameColumn {
+///     fn serialize_cell(&self, row: &R) -> impl Serialize + '_ {
+///         &row.get().0  // Return the name as a string
+///     }
+/// }
+/// ```
 pub trait SerializableColumn<R: Row>: TableColumn<R> {
+    /// Returns the header text for this column when exported.
+    ///
+    /// Defaults to [`TableColumn::column_name`], but can be overridden
+    /// to provide a different label in exports.
     fn header(&self) -> String {
         self.column_name()
     }
+
+    /// Serializes the cell data for the given row.
+    ///
+    /// Return any type that implements [`Serialize`]. The exporter will
+    /// handle converting it to the appropriate format.
     fn serialize_cell(&self, row: &R) -> impl Serialize + '_;
 }
 
+/// Trait for exporting table data to various formats.
+///
+/// Implement this trait to create custom export formats (CSV, Excel, JSON, etc.).
+///
+/// # Example
+///
+/// ```
+/// # use dioxus_tabular::Exporter;
+/// # use serde::Serialize;
+/// struct CsvExporter {
+///     output: String,
+/// }
+///
+/// impl Exporter for CsvExporter {
+///     type Error = std::fmt::Error;
+///
+///     fn serialize_header(&self, col: usize, header: &str) -> Result<(), Self::Error> {
+///         // Write header to CSV
+///         Ok(())
+///     }
+///
+///     fn serialize_cell<'a>(
+///         &self,
+///         row: usize,
+///         col: usize,
+///         cell: impl Serialize + 'a,
+///     ) -> Result<(), Self::Error> {
+///         // Write cell to CSV
+///         Ok(())
+///     }
+/// }
+/// ```
 pub trait Exporter {
+    /// The error type returned by export operations.
     type Error;
 
+    /// Serializes a column header.
+    ///
+    /// # Parameters
+    ///
+    /// - `col`: The column index
+    /// - `header`: The header text
     fn serialize_header(&self, col: usize, header: &str) -> Result<(), Self::Error>;
+
+    /// Serializes a table cell.
+    ///
+    /// # Parameters
+    ///
+    /// - `row`: The row index
+    /// - `col`: The column index
+    /// - `cell`: The serializable cell data
     fn serialize_cell<'a>(
         &self,
         row: usize,
