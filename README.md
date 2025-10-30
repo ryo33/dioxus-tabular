@@ -92,7 +92,7 @@ And, you define a simple table component like the following:
 
 ```rust
 #[component]
-pub fn SimpleTable<R: Row, C: Columns<R>>(rows: ReadOnlySignal<Vec<R>>, columns: C) -> Element {
+pub fn SimpleTable<R: Row, C: Columns<R>>(rows: ReadSignal<Vec<R>>, columns: C) -> Element {
     let table_context = TableContext::use_table_context(columns.column_names());
     rsx! {
         table {
@@ -115,7 +115,7 @@ and another one:
 
 ```rust
 #[component]
-pub fn FancyTable<R: Row, C: Columns<R>>(rows: ReadOnlySignal<Vec<R>>, columns: C) -> Element {
+pub fn FancyTable<R: Row, C: Columns<R>>(rows: ReadSignal<Vec<R>>, columns: C) -> Element {
     // Another table component with different styling or features than the above one.
     // ...
 }

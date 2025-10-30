@@ -86,7 +86,7 @@ impl<R: Row + GetRowData<Name>> TableColumn<R> for NameColumn {
 }
 
 #[component]
-pub fn Table<R: Row, C: Columns<R>>(rows: ReadOnlySignal<Vec<R>>, columns: C) -> Element {
+pub fn Table<R: Row, C: Columns<R>>(rows: ReadSignal<Vec<R>>, columns: C) -> Element {
     let data = use_tabular(columns, rows);
     rsx! {
         table {

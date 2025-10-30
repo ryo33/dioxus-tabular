@@ -1,4 +1,7 @@
-use dioxus::prelude::*;
+use dioxus::{
+    core::{generation, schedule_update},
+    prelude::*,
+};
 use dioxus_core::NoOpMutations;
 use futures::future::FutureExt;
 use std::{cell::RefCell, rc::Rc, sync::Arc};
@@ -85,9 +88,7 @@ pub fn test_hook<V: 'static>(
         vdom.render_immediate(&mut NoOpMutations);
     }
 
-    vdom.in_runtime(|| {
-        ScopeId::ROOT.in_runtime(|| {
-            final_check(MockProxy::new());
-        })
-    });
+    vdom.in_scope(ScopeId::ROOT, || {
+        final_check(MockProxy::new());
+    })
 }

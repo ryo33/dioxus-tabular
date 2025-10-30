@@ -105,10 +105,7 @@ use dioxus::prelude::*;
 /// #     rsx! { table {} }
 /// # }
 /// ```
-pub fn use_tabular<C: Columns<R>, R: Row>(
-    columns: C,
-    rows: ReadOnlySignal<Vec<R>>,
-) -> TableData<C, R> {
+pub fn use_tabular<C: Columns<R>, R: Row>(columns: C, rows: ReadSignal<Vec<R>>) -> TableData<C, R> {
     let context = TableContext::use_table_context(columns);
     context.table_data(rows)
 }

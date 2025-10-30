@@ -142,7 +142,7 @@ impl<C> TableContext<C> {
         }
     }
 
-    pub fn table_data<R>(self, rows: ReadOnlySignal<Vec<R>>) -> TableData<C, R>
+    pub fn table_data<R>(self, rows: ReadSignal<Vec<R>>) -> TableData<C, R>
     where
         C: Columns<R>,
         R: Row,
@@ -183,7 +183,7 @@ impl<C> TableContext<C> {
         })
     }
 
-    pub fn rows<R>(self, rows: ReadOnlySignal<Vec<R>>) -> impl Iterator<Item = RowData<C, R>>
+    pub fn rows<R>(self, rows: ReadSignal<Vec<R>>) -> impl Iterator<Item = RowData<C, R>>
     where
         C: Columns<R>,
         R: Row,
@@ -498,7 +498,7 @@ pub struct TableData<C: Columns<R>, R: Row> {
     /// The table context (provides access to sorting/filtering state).
     pub context: TableContext<C>,
     /// The reactive signal containing row data.
-    pub rows: ReadOnlySignal<Vec<R>>,
+    pub rows: ReadSignal<Vec<R>>,
 }
 
 impl<C: Columns<R>, R: Row> Clone for TableData<C, R> {
@@ -549,7 +549,7 @@ impl<C: Columns<R>, R: Row> CellData<C, R> {
 #[derive(PartialEq)]
 pub struct RowData<C: Columns<R>, R: Row> {
     pub(crate) context: TableContext<C>,
-    pub(crate) rows: ReadOnlySignal<Vec<R>>,
+    pub(crate) rows: ReadSignal<Vec<R>>,
     pub(crate) index: usize,
     pub(crate) _phantom: PhantomData<R>,
 }
