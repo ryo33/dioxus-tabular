@@ -13,7 +13,7 @@ Build reactive tabular UIs with declarative column definitions and multi-column 
 
 ```toml
 # for Dioxus 0.6.3
-dioxus-tabular = "0.1.0"
+dioxus-tabular = "0.1"
 
 # for Dioxus 0.7.0-rc.3
 dioxus-tabular = { git = "https://github.com/ryo33/dioxus-tabular", branch = "dioxus-0.7" }
