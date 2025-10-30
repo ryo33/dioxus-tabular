@@ -21,42 +21,42 @@ use dioxus::prelude::*;
 /// use dioxus_tabular::*;
 ///
 /// #[derive(Clone, PartialEq)]
-/// struct User {
+/// struct Product {
 ///     id: u32,
 ///     name: String,
-///     age: u32,
+///     price: u32,
 /// }
 ///
-/// impl Row for User {
+/// impl Row for Product {
 ///     fn key(&self) -> impl Into<String> {
 ///         self.id.to_string()
 ///     }
 /// }
 ///
 /// #[derive(Clone, PartialEq)]
-/// struct Age(u32);
+/// struct Price(u32);
 ///
-/// impl GetRowData<Age> for User {
-///     fn get(&self) -> Age {
-///         Age(self.age)
+/// impl GetRowData<Price> for Product {
+///     fn get(&self) -> Price {
+///         Price(self.price)
 ///     }
 /// }
 ///
-/// // A column that displays and sorts by age
+/// // A column that displays and sorts by price
 /// #[derive(Clone, PartialEq)]
-/// struct AgeColumn;
+/// struct PriceColumn;
 ///
-/// impl<R: Row + GetRowData<Age>> TableColumn<R> for AgeColumn {
+/// impl<R: Row + GetRowData<Price>> TableColumn<R> for PriceColumn {
 ///     fn column_name(&self) -> String {
-///         "age".into()
+///         "price".into()
 ///     }
 ///
 ///     fn render_header(&self, _context: ColumnContext, attributes: Vec<Attribute>) -> Element {
-///         rsx! { th { ..attributes, "Age" } }
+///         rsx! { th { ..attributes, "Price" } }
 ///     }
 ///
 ///     fn render_cell(&self, _context: ColumnContext, row: &R, attributes: Vec<Attribute>) -> Element {
-///         rsx! { td { ..attributes, "{row.get().0}" } }
+///         rsx! { td { ..attributes, "¥{row.get().0}" } }
 ///     }
 ///
 ///     fn compare(&self, a: &R, b: &R) -> std::cmp::Ordering {
@@ -71,36 +71,36 @@ use dioxus::prelude::*;
 /// # use dioxus::prelude::*;
 /// # use dioxus_tabular::*;
 /// # #[derive(Clone, PartialEq)]
-/// # struct User { age: u32, id: u32 }
-/// # impl Row for User {
+/// # struct Product { price: u32, id: u32 }
+/// # impl Row for Product {
 /// #     fn key(&self) -> impl Into<String> { self.id.to_string() }
 /// # }
 /// # #[derive(Clone, PartialEq)]
-/// # struct Age(u32);
-/// # impl GetRowData<Age> for User {
-/// #     fn get(&self) -> Age { Age(self.age) }
+/// # struct Price(u32);
+/// # impl GetRowData<Price> for Product {
+/// #     fn get(&self) -> Price { Price(self.price) }
 /// # }
 /// #[derive(Clone, PartialEq)]
-/// struct AgeColumn {
-///     min_age: Signal<u32>,
+/// struct PriceColumn {
+///     min_price: Signal<u32>,
 /// }
 ///
-/// impl<R: Row + GetRowData<Age>> TableColumn<R> for AgeColumn {
+/// impl<R: Row + GetRowData<Price>> TableColumn<R> for PriceColumn {
 ///     fn column_name(&self) -> String {
-///         "age".into()
+///         "price".into()
 ///     }
 ///
 ///     fn render_header(&self, _context: ColumnContext, attributes: Vec<Attribute>) -> Element {
-///         rsx! { th { ..attributes, "Age" } }
+///         rsx! { th { ..attributes, "Price" } }
 ///     }
 ///
 ///     fn render_cell(&self, _context: ColumnContext, row: &R, attributes: Vec<Attribute>) -> Element {
-///         rsx! { td { ..attributes, "{row.get().0}" } }
+///         rsx! { td { ..attributes, "¥{row.get().0}" } }
 ///     }
 ///
-///     // Only show rows with age >= min_age
+///     // Only show rows with price >= min_price
 ///     fn filter(&self, row: &R) -> bool {
-///         row.get().0 >= *self.min_age.read()
+///         row.get().0 >= *self.min_price.read()
 ///     }
 /// }
 /// ```
@@ -167,23 +167,23 @@ pub trait TableColumn<R: Row>: Clone + PartialEq + 'static {
     /// ```
     /// # use dioxus_tabular::*;
     /// # #[derive(Clone, PartialEq)]
-    /// # struct User { age: u32, id: u32 }
-    /// # impl Row for User {
+    /// # struct Product { price: u32, id: u32 }
+    /// # impl Row for Product {
     /// #     fn key(&self) -> impl Into<String> { self.id.to_string() }
     /// # }
     /// # #[derive(Clone, PartialEq)]
-    /// # struct Age(u32);
-    /// # impl GetRowData<Age> for User {
-    /// #     fn get(&self) -> Age { Age(self.age) }
+    /// # struct Price(u32);
+    /// # impl GetRowData<Price> for Product {
+    /// #     fn get(&self) -> Price { Price(self.price) }
     /// # }
     /// # #[derive(Clone, PartialEq)]
-    /// # struct AgeColumn;
-    /// # impl<R: Row + GetRowData<Age>> TableColumn<R> for AgeColumn {
-    /// #     fn column_name(&self) -> String { "age".into() }
+    /// # struct PriceColumn;
+    /// # impl<R: Row + GetRowData<Price>> TableColumn<R> for PriceColumn {
+    /// #     fn column_name(&self) -> String { "price".into() }
     /// #     fn render_header(&self, _: ColumnContext, _: Vec<dioxus::prelude::Attribute>) -> dioxus::prelude::Element { todo!() }
     /// #     fn render_cell(&self, _: ColumnContext, _: &R, _: Vec<dioxus::prelude::Attribute>) -> dioxus::prelude::Element { todo!() }
     /// fn filter(&self, row: &R) -> bool {
-    ///     row.get().0 >= 18  // Only show adults
+    ///     row.get().0 >= 1000  // Only show products ¥1000 or more
     /// }
     /// # }
     /// ```
@@ -203,19 +203,19 @@ pub trait TableColumn<R: Row>: Clone + PartialEq + 'static {
     /// # use dioxus_tabular::*;
     /// # use std::cmp::Ordering;
     /// # #[derive(Clone, PartialEq)]
-    /// # struct User { age: u32, id: u32 }
-    /// # impl Row for User {
+    /// # struct Product { price: u32, id: u32 }
+    /// # impl Row for Product {
     /// #     fn key(&self) -> impl Into<String> { self.id.to_string() }
     /// # }
     /// # #[derive(Clone, PartialEq)]
-    /// # struct Age(u32);
-    /// # impl GetRowData<Age> for User {
-    /// #     fn get(&self) -> Age { Age(self.age) }
+    /// # struct Price(u32);
+    /// # impl GetRowData<Price> for Product {
+    /// #     fn get(&self) -> Price { Price(self.price) }
     /// # }
     /// # #[derive(Clone, PartialEq)]
-    /// # struct AgeColumn;
-    /// # impl<R: Row + GetRowData<Age>> TableColumn<R> for AgeColumn {
-    /// #     fn column_name(&self) -> String { "age".into() }
+    /// # struct PriceColumn;
+    /// # impl<R: Row + GetRowData<Price>> TableColumn<R> for PriceColumn {
+    /// #     fn column_name(&self) -> String { "price".into() }
     /// #     fn render_header(&self, _: ColumnContext, _: Vec<dioxus::prelude::Attribute>) -> dioxus::prelude::Element { todo!() }
     /// #     fn render_cell(&self, _: ColumnContext, _: &R, _: Vec<dioxus::prelude::Attribute>) -> dioxus::prelude::Element { todo!() }
     /// fn compare(&self, a: &R, b: &R) -> Ordering {
