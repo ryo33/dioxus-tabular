@@ -15,6 +15,10 @@
 //!
 //! # Quick Start
 //!
+//! The examples below show the basic setup. For complete working examples with less
+//! boilerplate, see the [`examples/`](https://github.com/ryo33/dioxus-tabular/tree/main/examples) directory,
+//! particularly `sortable_table.rs` which demonstrates interactive sorting.
+//!
 //! ```rust
 //! use dioxus::prelude::*;
 //! use dioxus_tabular::*;
@@ -68,7 +72,7 @@
 //!         User { id: 2, name: "Bob".to_string() },
 //!     ]);
 //!
-//!     let data = use_tabular(NameColumn, users.into());
+//!     let data = use_tabular((NameColumn,), users.into());
 //!
 //!     rsx! {
 //!         table {
@@ -90,10 +94,17 @@
 //! Columns can implement custom comparison logic via [`TableColumn::compare`].
 //! Users can sort by multiple columns with priority control using [`ColumnContext::request_sort`].
 //!
+//! See `examples/sortable_table.rs` for a complete interactive example:
+//! ```sh
+//! cargo run --example sortable_table --features dioxus/desktop,dioxus/launch
+//! ```
+//!
 //! ## Row Filtering
 //!
 //! Columns can implement filtering logic via [`TableColumn::filter`].
 //! Filters are automatically applied when rendering rows.
+//!
+//! See `examples/tasks.rs` for a filtering example with checkboxes and search.
 //!
 //! ## Column Ordering and Visibility
 //!
@@ -119,6 +130,9 @@ mod context;
 #[cfg(feature = "export")]
 mod export;
 mod row;
+
+#[cfg(any(test, doctest, doc))]
+pub mod doc_examples;
 
 #[cfg(test)]
 pub mod test_suite;
