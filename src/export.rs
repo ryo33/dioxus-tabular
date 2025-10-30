@@ -43,7 +43,7 @@ use serde::Serialize;
 /// // Enable export by implementing SerializableColumn
 /// impl<R: Row + GetRowData<UserName>> SerializableColumn<R> for NameColumn {
 ///     fn serialize_cell(&self, row: &R) -> impl Serialize + '_ {
-///         &row.get().0  // Return the name as a string
+///         row.get().0  // Return the name as a string
 ///     }
 /// }
 /// ```

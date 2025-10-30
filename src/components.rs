@@ -43,7 +43,7 @@ use dioxus::prelude::*;
 ///     ]);
 ///
 ///     // Create table with single column
-///     let data = use_tabular(NameColumn, users.into());
+///     let data = use_tabular((NameColumn,), users.into());
 ///
 ///     rsx! {
 ///         table {
@@ -142,7 +142,7 @@ pub fn use_tabular<C: Columns<R>, R: Row>(
 /// # }
 /// # fn app() -> Element {
 /// #     let users = use_signal(|| vec![User { id: 1 }]);
-/// #     let data = use_tabular(Col, users.into());
+/// #     let data = use_tabular((Col,), users.into());
 /// rsx! {
 ///     table {
 ///         thead {
@@ -175,7 +175,7 @@ pub fn use_tabular<C: Columns<R>, R: Row>(
 /// # }
 /// # fn app() -> Element {
 /// #     let users = use_signal(|| vec![User { id: 1 }]);
-/// #     let data = use_tabular(Col, users.into());
+/// #     let data = use_tabular((Col,), users.into());
 /// rsx! {
 ///     tr {
 ///         TableHeaders {
@@ -228,7 +228,7 @@ pub fn TableHeaders<C: Columns<R>, R: Row>(
 /// # }
 /// # fn app() -> Element {
 /// #     let users = use_signal(|| vec![User { id: 1 }]);
-/// #     let data = use_tabular(Col, users.into());
+/// #     let data = use_tabular((Col,), users.into());
 /// rsx! {
 ///     table {
 ///         tbody {
@@ -264,7 +264,7 @@ pub fn TableHeaders<C: Columns<R>, R: Row>(
 /// # }
 /// # fn app() -> Element {
 /// #     let users = use_signal(|| vec![User { id: 1 }]);
-/// #     let data = use_tabular(Col, users.into());
+/// #     let data = use_tabular((Col,), users.into());
 /// rsx! {
 ///     for row in data.rows() {
 ///         tr {

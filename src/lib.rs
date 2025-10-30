@@ -68,7 +68,7 @@
 //!         User { id: 2, name: "Bob".to_string() },
 //!     ]);
 //!
-//!     let data = use_tabular(NameColumn, users.into());
+//!     let data = use_tabular((NameColumn,), users.into());
 //!
 //!     rsx! {
 //!         table {

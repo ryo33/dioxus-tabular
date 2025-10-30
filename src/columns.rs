@@ -32,7 +32,7 @@ use dioxus::prelude::*;
 /// #     fn render_cell(&self, _: ColumnContext, _: &User, _: Vec<dioxus::prelude::Attribute>) -> dioxus::prelude::Element { todo!() }
 /// # }
 /// // Single column
-/// let cols1 = Col1;
+/// let cols1 = (Col1,);
 ///
 /// // Multiple columns (tuple)
 /// let cols2 = (Col1, Col2);
@@ -93,6 +93,7 @@ macro_rules! columns {
     }
 }
 
+#[cfg(feature = "export")]
 macro_rules! serialize_columns {
     ($($number:tt => $column:ident),*) => {
         impl<$($column: crate::SerializableColumn<R>),*, R: Row> SerializableColumns<R> for ($($column),*,) {
