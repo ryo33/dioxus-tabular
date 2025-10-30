@@ -2,15 +2,14 @@
 name = "dioxus-tabular"
 version = "0.1.0"
 edition = "2024"
-license = "MIT OR Apache-2.0"
 description = "Type-safe and composable table framework for Dioxus"
-repository = "https://github.com/ryo33/dioxus-tabular"
-homepage = "https://github.com/ryo33/dioxus-tabular"
 documentation = "https://docs.rs/dioxus-tabular"
 readme = "README.md"
-keywords = ["dioxus", "table", "ui", "reactive", "web"]
-categories = ["gui", "web-programming"]
-authors = ["ryo33"]
+homepage = "https://github.com/ryo33/dioxus-tabular"
+repository = "https://github.com/ryo33/dioxus-tabular"
+license = "MIT OR Apache-2.0"
+keywords = ["dioxus", "reactive", "table"]
+categories = ["gui"]
 
 [[example]]
 name = "simple"
