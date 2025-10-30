@@ -9,6 +9,16 @@
 **Type-safe and composable table framework for Dioxus.**
 Build reactive tabular UIs with declarative column definitions and multi-column sorting.
 
+## Version compatibility
+
+```toml
+# for Dioxus 0.6.3
+dioxus-tabular = "0.1"
+
+# for Dioxus 0.7.0-rc.3
+dioxus-tabular = { git = "https://github.com/ryo33/dioxus-tabular", branch = "dioxus-0.7" }
+```
+
 ## Overview
 
 `dioxus-tabular` is a Dioxus-native framework for building **structured, declarative, and strongly-typed table UIs**.
@@ -19,10 +29,10 @@ Each column owns its own render logic, filter behavior, and sort comparator — 
 This approach may feel a little more verbose at first, but it unlocks:
 
 - **Composable, type-safe column definitions**
-- **Declarative multi-column sorting**
-- **Column reordering and visibility control**
+- **Declarative multi-column sorting and filtering**
+- **Centralized column reordering and visibility control**
 - **Extensible abstractions** (`Row`, `GetRowData`, `TableColumn`)
-- **Full Dioxus integration**: built with `rsx!` and `Signal` from the ground up
+- **Easy export to various formats** (CSV, Excel, etc.)
 
 ## Design Philosophy
 
@@ -71,6 +81,12 @@ Control which columns are displayed and in what order:
 - **Reset**: `reset_column_order()` - Restore default order and visibility
 
 Access these methods through `TableContextData` or `ColumnContext`.
+
+### Export to various formats (Needs optional `export` feature)
+
+You can export table data with your custom exporter implementation. Enable the `export` feature, and implement the `SerializableColumn` trait for your columns and the `Exporter` trait for your exporter.
+
+See the [example](examples/export.rs) for more details.
 
 ## Example scenario
 

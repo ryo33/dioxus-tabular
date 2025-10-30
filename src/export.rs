@@ -1,4 +1,6 @@
-use crate::{CellData, Columns, HeaderData, Row, SerializableColumns, TableColumn, TableContext};
+use crate::{
+    CellData, Columns, HeaderData, Row, SerializableColumns, TableColumn, TableContext, TableData,
+};
 use dioxus::prelude::*;
 use serde::Serialize;
 
@@ -105,7 +107,7 @@ pub trait Exporter {
     ///
     /// - `col`: The column index
     /// - `header`: The header text
-    fn serialize_header(&self, col: usize, header: &str) -> Result<(), Self::Error>;
+    fn serialize_header(&mut self, col: usize, header: &str) -> Result<(), Self::Error>;
 
     /// Serializes a table cell.
     ///
@@ -115,7 +117,7 @@ pub trait Exporter {
     /// - `col`: The column index
     /// - `cell`: The serializable cell data
     fn serialize_cell<'a>(
-        &self,
+        &mut self,
         row: usize,
         col: usize,
         cell: impl Serialize + 'a,
@@ -140,6 +142,12 @@ impl<C: Columns<R> + SerializableColumns<R>, R: Row> CellData<C, R> {
         let binding = self.row.context.columns.read();
         let columns = binding.serialize_cell();
         columns[self.column_index](row, col, &self.row.rows.read()[self.row.index], exporter)
+    }
+}
+
+impl<C: Columns<R> + SerializableColumns<R>, R: Row> TableData<C, R> {
+    pub fn serialize<E: Exporter>(&self, exporter: &mut E) -> Result<(), E::Error> {
+        self.context.serialize(self.rows, exporter)
     }
 }
 
@@ -275,18 +283,16 @@ mod tests {
         }
     }
 
-    use std::cell::RefCell;
-
     struct MockExporter {
-        headers: RefCell<Vec<(usize, String)>>,
-        cells: RefCell<Vec<(usize, usize, String)>>,
+        headers: Vec<(usize, String)>,
+        cells: Vec<(usize, usize, String)>,
     }
 
     impl MockExporter {
         fn new() -> Self {
             Self {
-                headers: RefCell::new(Vec::new()),
-                cells: RefCell::new(Vec::new()),
+                headers: Vec::new(),
+                cells: Vec::new(),
             }
         }
     }
@@ -294,19 +300,19 @@ mod tests {
     impl Exporter for MockExporter {
         type Error = ();
 
-        fn serialize_header(&self, col: usize, header: &str) -> Result<(), Self::Error> {
-            self.headers.borrow_mut().push((col, header.to_string()));
+        fn serialize_header(&mut self, col: usize, header: &str) -> Result<(), Self::Error> {
+            self.headers.push((col, header.to_string()));
             Ok(())
         }
 
         fn serialize_cell<'a>(
-            &self,
+            &mut self,
             row: usize,
             col: usize,
             cell: impl Serialize + 'a,
         ) -> Result<(), Self::Error> {
             let json = serde_json::to_string(&cell).unwrap();
-            self.cells.borrow_mut().push((row, col, json));
+            self.cells.push((row, col, json));
             Ok(())
         }
     }
@@ -324,10 +330,10 @@ mod tests {
                 context.serialize(rows.into(), &mut exporter).unwrap();
 
                 assert_eq!(
-                    exporter.headers.borrow().as_slice(),
+                    exporter.headers.as_slice(),
                     &[(0, "Name".to_string()), (1, "Age".to_string())]
                 );
-                assert_eq!(exporter.cells.borrow().as_slice(), &[]);
+                assert_eq!(exporter.cells.as_slice(), &[]);
             },
             |_| {},
         );
@@ -359,11 +365,11 @@ mod tests {
                 context.serialize(rows.into(), &mut exporter).unwrap();
 
                 assert_eq!(
-                    exporter.headers.borrow().as_slice(),
+                    exporter.headers.as_slice(),
                     &[(0, "Name".to_string()), (1, "Age".to_string())]
                 );
                 assert_eq!(
-                    exporter.cells.borrow().as_slice(),
+                    exporter.cells.as_slice(),
                     &[
                         (0, 0, "\"Alice\"".to_string()),
                         (0, 1, "30".to_string()),
@@ -396,7 +402,7 @@ mod tests {
 
                 // PriorityColumn has custom header
                 assert_eq!(
-                    exporter.headers.borrow().as_slice(),
+                    exporter.headers.as_slice(),
                     &[
                         (0, "Name".to_string()),
                         (1, "Age".to_string()),
@@ -404,7 +410,7 @@ mod tests {
                     ]
                 );
                 assert_eq!(
-                    exporter.cells.borrow().as_slice(),
+                    exporter.cells.as_slice(),
                     &[
                         (0, 0, "\"Alice\"".to_string()),
                         (0, 1, "30".to_string()),
@@ -436,12 +442,12 @@ mod tests {
 
                 // Headers should be in reordered position
                 assert_eq!(
-                    exporter.headers.borrow().as_slice(),
+                    exporter.headers.as_slice(),
                     &[(0, "Age".to_string()), (1, "Name".to_string())]
                 );
                 // Cells should follow the reordered columns
                 assert_eq!(
-                    exporter.cells.borrow().as_slice(),
+                    exporter.cells.as_slice(),
                     &[(0, 0, "30".to_string()), (0, 1, "\"Alice\"".to_string())]
                 );
             },
@@ -468,12 +474,9 @@ mod tests {
                 context.serialize(rows.into(), &mut exporter).unwrap();
 
                 // Only Name column should be exported
+                assert_eq!(exporter.headers.as_slice(), &[(0, "Name".to_string())]);
                 assert_eq!(
-                    exporter.headers.borrow().as_slice(),
-                    &[(0, "Name".to_string())]
-                );
-                assert_eq!(
-                    exporter.cells.borrow().as_slice(),
+                    exporter.cells.as_slice(),
                     &[(0, 0, "\"Alice\"".to_string())]
                 );
             },
@@ -515,12 +518,12 @@ mod tests {
                 context.serialize(rows.into(), &mut exporter).unwrap();
 
                 assert_eq!(
-                    exporter.headers.borrow().as_slice(),
+                    exporter.headers.as_slice(),
                     &[(0, "Name".to_string()), (1, "Age".to_string())]
                 );
                 // Should be sorted: Bob (25), Alice (30), Charlie (35)
                 assert_eq!(
-                    exporter.cells.borrow().as_slice(),
+                    exporter.cells.as_slice(),
                     &[
                         (0, 0, "\"Bob\"".to_string()),
                         (0, 1, "25".to_string()),
@@ -555,8 +558,8 @@ mod tests {
                 context.serialize(rows.into(), &mut exporter).unwrap();
 
                 // No headers or cells should be exported
-                assert_eq!(exporter.headers.borrow().as_slice(), &[]);
-                assert_eq!(exporter.cells.borrow().as_slice(), &[]);
+                assert_eq!(exporter.headers.as_slice(), &[]);
+                assert_eq!(exporter.cells.as_slice(), &[]);
             },
             |_| {},
         );
@@ -602,11 +605,11 @@ mod tests {
 
                 // Only Age and Name columns (reordered), sorted by Age
                 assert_eq!(
-                    exporter.headers.borrow().as_slice(),
+                    exporter.headers.as_slice(),
                     &[(0, "Age".to_string()), (1, "Name".to_string())]
                 );
                 assert_eq!(
-                    exporter.cells.borrow().as_slice(),
+                    exporter.cells.as_slice(),
                     &[
                         (0, 0, "25".to_string()),
                         (0, 1, "\"Bob\"".to_string()),
