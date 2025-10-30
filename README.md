@@ -7,7 +7,7 @@
 ![GitHub Repo stars](https://img.shields.io/github/stars/ryo33/dioxus-tabular?style=social)
 
 **Type-safe and composable table framework for Dioxus.**
-Build reactive tabular UIs with declarative column definitions and multi-column sorting.
+Define self-contained columns with rendering, filtering, and sorting logic that work independently of table data types and components.
 
 ## Version compatibility
 
@@ -23,24 +23,25 @@ dioxus-tabular = { git = "https://github.com/ryo33/dioxus-tabular", branch = "di
 
 `dioxus-tabular` is a Dioxus-native framework for building **structured, declarative, and strongly-typed table UIs**.
 
-Instead of configuring your table with dynamic descriptors or ad-hoc data models, you define **columns as typed components**.
-Each column owns its own render logic, filter behavior, and sort comparator — and can hold local reactive state via `Signal`.
+Instead of configuring your table with dynamic descriptors or ad-hoc data models, you define **columns as typed components** that don't depend on the actual table data type or table component.
+Each column owns its own rendering, filtering, and sorting logic — and can hold local reactive state via `Signal`.
 
-This approach may feel a little more verbose at first, but it unlocks:
+This approach may seem more verbose initially, but it enables:
 
-- **Composable, type-safe column definitions**
+- **Self-contained, type-safe column definitions** that work with any compatible row type
+- **Interchangeable columns, table data types, and table components**
 - **Declarative multi-column sorting and filtering**
-- **Centralized column reordering and visibility control**
+- **Column reordering, hiding, and visibility control**
+- **Table export** to various formats (CSV, Excel, etc.)
 - **Extensible abstractions** (`Row`, `GetRowData`, `TableColumn`)
-- **Easy export to various formats** (CSV, Excel, etc.)
 
 ## Design Philosophy
 
 - Columns are *first-class citizens*: each is a self-contained logic unit.
 - Columns are *composable*: they can be freely combined into tables.
-- Columns are *type-safe*: If a column type does not fit to the row data type, the compiler will complain.
-- Columns are *self-contained*: they can hold their own state, filtering logic, sorting logic, and rendering logic.
-- All columns, data, and tables are *reusable* and *swappable*: All of them does not depend on each other, so you can mix and match them as you like.
+- Columns are *type-safe*: If a column type does not fit the row data type, the compiler will complain.
+- Columns are *independent*: they define their own state, filtering, sorting, and rendering logic.
+- Columns, data, and tables are *reusable* and *interchangeable*: They don't depend on each other, so you can freely mix and match them.
 
 ## Core Concepts
 
@@ -69,7 +70,7 @@ Tables support declarative multi-column sorting with priority control:
 Columns can implement custom filtering logic:
 
 - Each column defines its own `TableColumn::filter()` method
-- All filters from all columns are applied automatically when rendering rows
+- All column filters are automatically applied when rendering rows
 
 ### Column Ordering and Visibility
 
@@ -82,7 +83,7 @@ Control which columns are displayed and in what order:
 
 Access these methods through `TableContextData` or `ColumnContext`.
 
-### Export to various formats (Needs optional `export` feature)
+### Export to various formats (requires the optional `export` feature)
 
 You can export table data with your custom exporter implementation. Enable the `export` feature, and implement the `SerializableColumn` trait for your columns and the `Exporter` trait for your exporter.
 
@@ -90,7 +91,7 @@ See the [example](examples/export.rs) for more details.
 
 ## Example scenario
 
-You could define the following types and implement those traits like the following example:
+You can define types and implement traits as follows:
 
 Rows:
 
@@ -137,7 +138,7 @@ pub fn FancyTable<R: Row, C: Columns<R>>(rows: ReadOnlySignal<Vec<R>>, columns: 
 }
 ```
 
-Now you can render many kinds of tables with different column combinations like the following:
+You can then render various kinds of tables with different column combinations:
 
 ```rust
 let users: Vec<User> = ...;
@@ -147,7 +148,7 @@ rsx! {
     SimpleTable { rows: users, columns: (UserIdColumn, UserNameColumn) }
     // Same data and columns, but with different styling or features than the above one.
     FancyTable { rows: users, columns: (UserIdColumn, UserNameColumn) }
-    // Table for accces logs. Notice that the UserIdColumn is reusable for both users and access logs.
+    // Table for access logs. The UserIdColumn is reusable across different table types.
     SimpleTable { rows: access_logs, columns: (AccessLogIdColumn, TimestampColumn, UserIdColumn) }
 }
 ```
