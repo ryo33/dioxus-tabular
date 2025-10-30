@@ -398,33 +398,15 @@ pub struct ColumnContext {
 impl ColumnContext {
     /// Requests a sort operation on this column.
     ///
-    /// # Example
-    ///
-    /// ```
-    /// # use dioxus_tabular::*;
-    /// # fn example(context: ColumnContext) {
-    /// // Add ascending sort as primary
-    /// context.request_sort(SortGesture::AddFirst(Sort {
-    ///     direction: SortDirection::Ascending,
-    /// }));
-    /// # }
-    /// ```
+    /// Use `SortGesture::AddFirst` to make this the primary sort,
+    /// `AddLast` to add as secondary, `Toggle` to flip direction, or `Cancel` to remove.
     pub fn request_sort(&self, sort: SortGesture) {
         self.table_context.request_sort(self.column, sort);
     }
 
     /// Returns the sort information for this column, or `None` if not sorted.
     ///
-    /// # Example
-    ///
-    /// ```
-    /// # use dioxus_tabular::*;
-    /// # fn example(context: ColumnContext) {
-    /// if let Some(info) = context.sort_info() {
-    ///     println!("Sorted with priority {}", info.priority);
-    /// }
-    /// # }
-    /// ```
+    /// Use `SortInfo.priority` to show sort order (0 = primary) and `SortInfo.direction` for the arrow.
     pub fn sort_info(&self) -> Option<SortInfo> {
         let sorts = self.table_context.sorts.read();
         sorts
@@ -448,13 +430,12 @@ impl ColumnContext {
         self.table_context.hide_column(self.column);
     }
 
-    /// Shows this column in the display.
-    /// If at_index is None, the column is appended to the end.
+    /// Shows this column in the display. If `at_index` is `None`, appends to the end.
     pub fn show(&self, at_index: Option<usize>) {
         self.table_context.show_column(self.column, at_index);
     }
 
-    /// Moves this column to a specific position in the display order (0-indexed).
+    /// Moves this column to a specific display position (0-indexed).
     pub fn move_to(&self, new_index: usize) {
         self.table_context.move_column_to(self.column, new_index);
     }
@@ -474,12 +455,12 @@ impl ColumnContext {
         self.table_context.is_column_visible(self.column)
     }
 
-    /// Returns the display position of this column (0-indexed), or None if hidden.
+    /// Returns the display position (0-indexed), or `None` if hidden.
     pub fn position(&self) -> Option<usize> {
         self.table_context.column_position(self.column)
     }
 
-    /// Resets the column order to the default state (all columns visible in natural order).
+    /// Resets all columns to default visibility and order.
     pub fn reset_order(&self) {
         self.table_context.reset_column_order();
     }

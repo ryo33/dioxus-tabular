@@ -112,81 +112,21 @@ pub trait TableColumn<R: Row>: Clone + PartialEq + 'static {
 
     /// Renders the column header.
     ///
-    /// # Parameters
-    ///
-    /// - `context`: Provides access to sorting state and controls
-    /// - `attributes`: HTML attributes to spread onto the header element
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// # use dioxus::prelude::*;
-    /// # use dioxus_tabular::*;
-    /// # #[derive(Clone, PartialEq)]
-    /// # struct MyColumn;
-    /// # #[derive(Clone, PartialEq)]
-    /// # struct User { id: u32 }
-    /// # impl Row for User {
-    /// #     fn key(&self) -> impl Into<String> { self.id.to_string() }
-    /// # }
-    /// # impl TableColumn<User> for MyColumn {
-    /// #     fn column_name(&self) -> String { "col".into() }
-    /// fn render_header(&self, context: ColumnContext, attributes: Vec<Attribute>) -> Element {
-    ///     rsx! {
-    ///         th { ..attributes,
-    ///             "My Column"
-    ///             if let Some(info) = context.sort_info() {
-    ///                 " (sorted)"
-    ///             }
-    ///         }
-    ///     }
-    /// }
-    /// #     fn render_cell(&self, _: ColumnContext, _: &User, _: Vec<Attribute>) -> Element {
-    /// #         rsx! { td {} }
-    /// #     }
-    /// # }
-    /// ```
+    /// Use `context.sort_info()` to display sort state, and spread `attributes` onto your header element.
+    /// Typically returns a `<th>` element.
     fn render_header(&self, context: ColumnContext, attributes: Vec<Attribute>) -> Element;
 
     /// Renders a cell for the given row.
     ///
-    /// # Parameters
-    ///
-    /// - `context`: Provides access to column state
-    /// - `row`: The row data to render
-    /// - `attributes`: HTML attributes to spread onto the cell element
+    /// Access row data via `GetRowData::get()`, and spread `attributes` onto your cell element.
+    /// Typically returns a `<td>` element.
     fn render_cell(&self, context: ColumnContext, row: &R, attributes: Vec<Attribute>) -> Element;
 
     /// Determines whether a row should be displayed.
     ///
     /// Return `true` to include the row, `false` to filter it out.
-    /// The default implementation includes all rows.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// # use dioxus_tabular::*;
-    /// # #[derive(Clone, PartialEq)]
-    /// # struct Product { price: u32, id: u32 }
-    /// # impl Row for Product {
-    /// #     fn key(&self) -> impl Into<String> { self.id.to_string() }
-    /// # }
-    /// # #[derive(Clone, PartialEq)]
-    /// # struct Price(u32);
-    /// # impl GetRowData<Price> for Product {
-    /// #     fn get(&self) -> Price { Price(self.price) }
-    /// # }
-    /// # #[derive(Clone, PartialEq)]
-    /// # struct PriceColumn;
-    /// # impl<R: Row + GetRowData<Price>> TableColumn<R> for PriceColumn {
-    /// #     fn column_name(&self) -> String { "price".into() }
-    /// #     fn render_header(&self, _: ColumnContext, _: Vec<dioxus::prelude::Attribute>) -> dioxus::prelude::Element { todo!() }
-    /// #     fn render_cell(&self, _: ColumnContext, _: &R, _: Vec<dioxus::prelude::Attribute>) -> dioxus::prelude::Element { todo!() }
-    /// fn filter(&self, row: &R) -> bool {
-    ///     row.get().0 >= 1000  // Only show products ¥1000 or more
-    /// }
-    /// # }
-    /// ```
+    /// All column filters are combined with AND logic.
+    /// Default: includes all rows.
     fn filter(&self, row: &R) -> bool {
         let _ = row;
         true
@@ -194,35 +134,9 @@ pub trait TableColumn<R: Row>: Clone + PartialEq + 'static {
 
     /// Compares two rows for sorting.
     ///
-    /// Return `Ordering::Less`, `Ordering::Equal`, or `Ordering::Greater`.
-    /// The default implementation considers all rows equal (no sorting).
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// # use dioxus_tabular::*;
-    /// # use std::cmp::Ordering;
-    /// # #[derive(Clone, PartialEq)]
-    /// # struct Product { price: u32, id: u32 }
-    /// # impl Row for Product {
-    /// #     fn key(&self) -> impl Into<String> { self.id.to_string() }
-    /// # }
-    /// # #[derive(Clone, PartialEq)]
-    /// # struct Price(u32);
-    /// # impl GetRowData<Price> for Product {
-    /// #     fn get(&self) -> Price { Price(self.price) }
-    /// # }
-    /// # #[derive(Clone, PartialEq)]
-    /// # struct PriceColumn;
-    /// # impl<R: Row + GetRowData<Price>> TableColumn<R> for PriceColumn {
-    /// #     fn column_name(&self) -> String { "price".into() }
-    /// #     fn render_header(&self, _: ColumnContext, _: Vec<dioxus::prelude::Attribute>) -> dioxus::prelude::Element { todo!() }
-    /// #     fn render_cell(&self, _: ColumnContext, _: &R, _: Vec<dioxus::prelude::Attribute>) -> dioxus::prelude::Element { todo!() }
-    /// fn compare(&self, a: &R, b: &R) -> Ordering {
-    ///     a.get().0.cmp(&b.get().0)
-    /// }
-    /// # }
-    /// ```
+    /// Return `Ordering::Less` if `a < b`, `Ordering::Greater` if `a > b`, or `Ordering::Equal`.
+    /// Used for multi-column sorting when this column is in the sort list.
+    /// Default: considers all rows equal (no sorting).
     fn compare(&self, a: &R, b: &R) -> std::cmp::Ordering {
         let _ = (a, b);
         std::cmp::Ordering::Equal
