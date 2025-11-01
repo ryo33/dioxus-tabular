@@ -15,8 +15,8 @@ Define self-contained columns with rendering, filtering, and sorting logic that 
 # for Dioxus 0.6.3
 dioxus-tabular = "0.1"
 
-# for Dioxus 0.7.0-rc.3
-dioxus-tabular = { git = "https://github.com/ryo33/dioxus-tabular", branch = "dioxus-0.7" }
+# for Dioxus 0.7.0
+dioxus-tabular = "0.2"
 ```
 
 ## Overview
