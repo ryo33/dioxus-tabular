@@ -154,7 +154,7 @@ impl<C: Columns<R> + SerializableColumns<R>, R: Row> TableData<C, R> {
 impl<C> TableContext<C> {
     pub fn serialize<R, E: Exporter>(
         &self,
-        rows: ReadOnlySignal<Vec<R>>,
+        rows: ReadSignal<Vec<R>>,
         exporter: &mut E,
     ) -> Result<(), E::Error>
     where
