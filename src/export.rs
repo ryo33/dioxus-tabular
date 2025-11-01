@@ -81,13 +81,13 @@ pub trait SerializableColumn<R: Row>: TableColumn<R> {
 /// impl Exporter for CsvExporter {
 ///     type Error = std::fmt::Error;
 ///
-///     fn serialize_header(&self, col: usize, header: &str) -> Result<(), Self::Error> {
+///     fn serialize_header(&mut self, col: usize, header: &str) -> Result<(), Self::Error> {
 ///         // Write header to CSV
 ///         Ok(())
 ///     }
 ///
 ///     fn serialize_cell<'a>(
-///         &self,
+///         &mut self,
 ///         row: usize,
 ///         col: usize,
 ///         cell: impl Serialize + 'a,
