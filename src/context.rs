@@ -572,6 +572,12 @@ impl<C: Columns<R>, R: Row> RowData<C, R> {
     pub fn cells(self) -> impl Iterator<Item = CellData<C, R>> {
         self.context.cells(self)
     }
+
+    /// Returns the data for this row.
+    pub fn data(&self) -> MappedSignal<R> {
+        let index = self.index;
+        self.rows.map(move |rows| &rows[index])
+    }
 }
 
 #[cfg(test)]
