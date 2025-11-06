@@ -137,7 +137,7 @@ impl Exporter for CsvExporter {
 
 #[component]
 pub fn Table<R: Row, C: Columns<R> + SerializableColumns<R>>(
-    rows: ReadOnlySignal<Vec<R>>,
+    rows: ReadSignal<Vec<R>>,
     columns: C,
 ) -> Element {
     let mut serialized = use_signal(String::new);
