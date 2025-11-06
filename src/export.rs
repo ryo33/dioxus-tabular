@@ -146,12 +146,14 @@ impl<C: Columns<R> + SerializableColumns<R>, R: Row> CellData<C, R> {
 }
 
 impl<C: Columns<R> + SerializableColumns<R>, R: Row> TableData<C, R> {
+    /// Serializes the table data to the given exporter.
     pub fn serialize<E: Exporter>(&self, exporter: &mut E) -> Result<(), E::Error> {
         self.context.serialize(self.rows, exporter)
     }
 }
 
 impl<C> TableContext<C> {
+    /// Serializes the table context to the given exporter.
     pub fn serialize<R, E: Exporter>(
         &self,
         rows: ReadSignal<Vec<R>>,

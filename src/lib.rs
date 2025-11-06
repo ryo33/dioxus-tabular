@@ -1,3 +1,5 @@
+#![deny(missing_docs)]
+
 //! Type-safe and composable table framework for Dioxus.
 //!
 //! `dioxus-tabular` provides a declarative, type-safe way to build reactive tables in Dioxus.

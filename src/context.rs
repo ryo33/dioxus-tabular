@@ -92,6 +92,7 @@ pub enum SortGesture {
 }
 
 #[derive(Clone, Copy, PartialEq)]
+/// A sort record.
 pub struct SortRecord {
     column: usize,
     sort: Sort,
@@ -107,6 +108,7 @@ pub(crate) struct TableContextData {
 }
 
 #[derive(PartialEq)]
+/// A table context.
 pub struct TableContext<C: 'static> {
     pub(crate) data: TableContextData,
     /// Does not need to be Signal, but for Copy trait.
@@ -122,6 +124,7 @@ impl<C: 'static> Clone for TableContext<C> {
 }
 
 impl<C> TableContext<C> {
+    /// Creates a new table context.
     pub fn use_table_context<R>(columns: C) -> Self
     where
         C: Columns<R>,
@@ -142,6 +145,7 @@ impl<C> TableContext<C> {
         }
     }
 
+    /// Creates a new table data.
     pub fn table_data<R>(self, rows: ReadSignal<Vec<R>>) -> TableData<C, R>
     where
         C: Columns<R>,
@@ -157,6 +161,7 @@ impl<C> TableContext<C> {
         self.data.get_column_order()
     }
 
+    /// Returns an iterator over the headers.
     pub fn headers<R>(self) -> impl Iterator<Item = HeaderData<C, R>>
     where
         C: Columns<R>,
@@ -170,6 +175,7 @@ impl<C> TableContext<C> {
         })
     }
 
+    /// Returns an iterator over the cells.
     pub fn cells<R>(self, row: RowData<C, R>) -> impl Iterator<Item = CellData<C, R>>
     where
         C: Columns<R>,
@@ -183,6 +189,7 @@ impl<C> TableContext<C> {
         })
     }
 
+    /// Returns an iterator over the rows.
     pub fn rows<R>(self, rows: ReadSignal<Vec<R>>) -> impl Iterator<Item = RowData<C, R>>
     where
         C: Columns<R>,
