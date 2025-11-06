@@ -574,7 +574,9 @@ impl<C: Columns<R>, R: Row> RowData<C, R> {
     }
 
     /// Returns the data for this row.
-    pub fn data(&self) -> MappedSignal<R> {
+    pub fn data(
+        &self,
+    ) -> impl Readable<Target = R> + Copy + std::ops::Deref<Target = dyn Fn() -> R> + 'static {
         let index = self.index;
         self.rows.map(move |rows| &rows[index])
     }
