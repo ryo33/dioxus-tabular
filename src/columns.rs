@@ -51,18 +51,30 @@ pub trait Columns<R: Row>: Clone + PartialEq + 'static {
     fn compare(&self) -> Vec<Box<dyn Fn(&R, &R) -> std::cmp::Ordering + '_>>;
 }
 
+/// A serializable header with export configuration.
+#[cfg(feature = "export")]
+pub struct SerializableHeader<'a> {
+    pub header_fn: Box<dyn Fn() -> String + 'a>,
+    pub include_in_export: bool,
+}
+
+/// A serializable cell with export configuration.
+#[cfg(feature = "export")]
+#[allow(clippy::type_complexity)]
+pub struct SerializableCell<'a, R, E: Exporter> {
+    pub cell_fn: Box<dyn Fn(usize, usize, &R, &mut E) -> Result<(), E::Error> + 'a>,
+    pub include_in_export: bool,
+}
+
 /// Trait for columns that support serialization (export feature).
 ///
 /// Automatically implemented for tuples of [`SerializableColumn`](crate::SerializableColumn)s.
 #[cfg(feature = "export")]
 pub trait SerializableColumns<R: Row>: Columns<R> {
-    /// Returns header serializers for all columns.
-    fn serialize_headers(&self) -> Vec<Box<dyn Fn() -> String + '_>>;
-    /// Returns cell serializers for all columns.
-    #[allow(clippy::type_complexity, reason = "to provide internal API")]
-    fn serialize_cell<E: Exporter>(
-        &self,
-    ) -> Vec<Box<dyn Fn(usize, usize, &R, &mut E) -> Result<(), E::Error> + '_>>;
+    /// Returns header serializers for all columns including whether to include in export.
+    fn serialize_headers(&self) -> Vec<SerializableHeader<'_>>;
+    /// Returns cell serializers for all columns including whether to include in export.
+    fn serialize_cell<E: Exporter>(&self) -> Vec<SerializableCell<'_, R, E>>;
 }
 
 macro_rules! columns {
@@ -97,11 +109,19 @@ macro_rules! columns {
 macro_rules! serialize_columns {
     ($($number:tt => $column:ident),*) => {
         impl<$($column: crate::SerializableColumn<R>),*, R: Row> SerializableColumns<R> for ($($column),*,) {
-            fn serialize_headers(&self) -> Vec<Box<dyn Fn() -> String + '_>> {
-                vec![$(Box::new(move || self.$number.header())),*]
+            fn serialize_headers(&self) -> Vec<SerializableHeader<'_>> {
+                vec![$(SerializableHeader {
+                    header_fn: Box::new(move || self.$number.header()),
+                    include_in_export: self.$number.include_in_export(),
+                }),*]
             }
-            fn serialize_cell<Ex: Exporter>(&self) -> Vec<Box<dyn Fn(usize, usize, &R, &mut Ex) -> Result<(), Ex::Error> + '_>> {
-                vec![$(Box::new(move |row_index, col_index, row, exporter| exporter.serialize_cell(row_index, col_index, self.$number.serialize_cell(row)))),*]
+            fn serialize_cell<Ex: Exporter>(&self) -> Vec<SerializableCell<'_, R, Ex>> {
+                vec![$(SerializableCell {
+                    cell_fn: Box::new(move |row_index, col_index, row, exporter| -> Result<(), Ex::Error> {
+                        exporter.serialize_cell(row_index, col_index, self.$number.serialize_cell(row))
+                    }),
+                    include_in_export: self.$number.include_in_export(),
+                }),*]
             }
         }
     }

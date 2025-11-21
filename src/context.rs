@@ -170,6 +170,20 @@ impl<C> TableContext<C> {
         })
     }
 
+    /// Returns an iterator over all column headers, including hidden ones.
+    pub fn all_headers<R>(self) -> impl Iterator<Item = HeaderData<C, R>>
+    where
+        C: Columns<R>,
+        R: Row,
+    {
+        let num_columns = self.data.num_columns();
+        (0..num_columns).map(move |column_index| HeaderData {
+            context: self,
+            column_index,
+            _phantom: PhantomData,
+        })
+    }
+
     pub fn cells<R>(self, row: RowData<C, R>) -> impl Iterator<Item = CellData<C, R>>
     where
         C: Columns<R>,
@@ -245,6 +259,10 @@ impl TableContextData {
 
     pub fn get_column_order(&self) -> Vec<usize> {
         self.column_order.read().get_order().to_vec()
+    }
+
+    pub fn num_columns(&self) -> usize {
+        self.column_names.read().len()
     }
 
     pub fn get_column_name(&self, index: usize) -> String {
@@ -482,6 +500,11 @@ impl<C: Columns<R>, R: Row> HeaderData<C, R> {
         self.context.data.get_column_name(self.column_index)
     }
 
+    /// Returns the column context for this header.
+    pub fn column_context(&self) -> ColumnContext {
+        self.context.data.column_context(self.column_index)
+    }
+
     /// Renders this header with the given attributes.
     pub fn render(&self, attributes: Vec<Attribute>) -> Element {
         let binding = self.context.columns.read();
@@ -587,3 +610,6 @@ mod tests_sort_request;
 
 #[cfg(test)]
 mod tests_rows_filter_and_sort;
+
+#[cfg(test)]
+mod tests_column_context;

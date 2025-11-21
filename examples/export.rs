@@ -67,7 +67,9 @@ impl<R: Row + GetRowData<Id>> SerializableColumn<R> for IdColumn {
 }
 
 #[derive(Clone, PartialEq)]
-pub struct NameColumn;
+pub struct NameColumn {
+    serialize: Signal<bool>,
+}
 
 impl<R: Row + GetRowData<Name>> TableColumn<R> for NameColumn {
     fn column_name(&self) -> String {
@@ -95,6 +97,10 @@ impl<R: Row + GetRowData<Name>> TableColumn<R> for NameColumn {
 impl<R: Row + GetRowData<Name>> SerializableColumn<R> for NameColumn {
     fn serialize_cell(&self, row: &R) -> impl Serialize + '_ {
         row.get().0
+    }
+
+    fn include_in_export(&self) -> bool {
+        *self.serialize.read()
     }
 }
 
@@ -173,6 +179,7 @@ pub fn Table<R: Row, C: Columns<R> + SerializableColumns<R>>(
 }
 
 fn app() -> Element {
+    let mut serialize_name = use_signal(|| true);
     let rows = use_signal(|| {
         vec![
             RowData {
@@ -186,7 +193,25 @@ fn app() -> Element {
         ]
     });
     rsx! {
-        Table { rows, columns: (IdColumn, NameColumn) }
+        div {
+            input {
+                r#type: "checkbox",
+                checked: serialize_name(),
+                oninput: move |_| {
+                    serialize_name.set(!serialize_name());
+                },
+            }
+            "serialize name"
+        }
+        Table {
+            rows,
+            columns: (
+                IdColumn,
+                NameColumn {
+                    serialize: serialize_name,
+                },
+            ),
+        }
     }
 }
 

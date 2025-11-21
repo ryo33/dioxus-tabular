@@ -1,6 +1,4 @@
-use crate::{
-    CellData, Columns, HeaderData, Row, SerializableColumns, TableColumn, TableContext, TableData,
-};
+use crate::{Columns, Row, SerializableColumns, TableColumn, TableContext, TableData};
 use dioxus::prelude::*;
 use serde::Serialize;
 
@@ -63,6 +61,13 @@ pub trait SerializableColumn<R: Row>: TableColumn<R> {
     /// Return any type that implements [`Serialize`]. The exporter will
     /// handle converting it to the appropriate format.
     fn serialize_cell(&self, row: &R) -> impl Serialize + '_;
+
+    /// Whether to include this column in the export.
+    ///
+    /// Default: true
+    fn include_in_export(&self) -> bool {
+        true
+    }
 }
 
 /// Trait for exporting table data to various formats.
@@ -124,27 +129,6 @@ pub trait Exporter {
     ) -> Result<(), Self::Error>;
 }
 
-impl<C: Columns<R> + SerializableColumns<R>, R: Row> HeaderData<C, R> {
-    fn serialize<E: Exporter>(&self, col: usize, exporter: &mut E) -> Result<(), E::Error> {
-        let binding = self.context.columns.read();
-        let headers = binding.serialize_headers();
-        exporter.serialize_header(col, &headers[self.column_index]())
-    }
-}
-
-impl<C: Columns<R> + SerializableColumns<R>, R: Row> CellData<C, R> {
-    fn serialize<E: Exporter>(
-        &self,
-        row: usize,
-        col: usize,
-        exporter: &mut E,
-    ) -> Result<(), E::Error> {
-        let binding = self.row.context.columns.read();
-        let columns = binding.serialize_cell();
-        columns[self.column_index](row, col, &self.row.rows.read()[self.row.index], exporter)
-    }
-}
-
 impl<C: Columns<R> + SerializableColumns<R>, R: Row> TableData<C, R> {
     pub fn serialize<E: Exporter>(&self, exporter: &mut E) -> Result<(), E::Error> {
         self.context.serialize(self.rows, exporter)
@@ -161,12 +145,34 @@ impl<C> TableContext<C> {
         C: Columns<R> + SerializableColumns<R>,
         R: Row,
     {
-        for (col, header) in self.headers().enumerate() {
-            header.serialize(col, exporter)?;
+        let binding = self.columns.read();
+        let all_headers = binding.serialize_headers();
+        let all_cells = binding.serialize_cell();
+
+        // Use self.headers() which already respects column order and visibility
+        let mut export_col = 0;
+        for header_data in self.headers() {
+            let col_index = header_data.column_index;
+            if all_headers[col_index].include_in_export {
+                exporter.serialize_header(export_col, &(all_headers[col_index].header_fn)())?;
+                export_col += 1;
+            }
         }
-        for (row, row_data) in self.rows(rows).enumerate() {
-            for (col, cell_data) in row_data.cells().enumerate() {
-                cell_data.serialize(row, col, exporter)?;
+
+        // Use self.rows(rows) which already respects sorting and filtering
+        let sorted_rows: Vec<_> = self.rows(rows).collect();
+        for (row_index, row_data) in sorted_rows.into_iter().enumerate() {
+            // Get the actual row data from the sorted position
+            let row = &row_data.rows.read()[row_data.index];
+            let mut export_col = 0;
+
+            // Use the same column order as headers
+            for cell_data in row_data.cells() {
+                let col_index = cell_data.column_index;
+                if all_cells[col_index].include_in_export {
+                    (all_cells[col_index].cell_fn)(row_index, export_col, row, exporter)?;
+                    export_col += 1;
+                }
             }
         }
         Ok(())
@@ -176,7 +182,7 @@ impl<C> TableContext<C> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_suite::test_hook;
+    use crate::test_suite::{test_hook, test_hook_simple};
     use crate::{ColumnContext, Sort, SortDirection, SortGesture};
 
     #[derive(Debug, Clone, PartialEq)]
@@ -217,6 +223,9 @@ mod tests {
                 td {}
             }
         }
+        fn compare(&self, a: &Person, b: &Person) -> std::cmp::Ordering {
+            a.name.cmp(&b.name)
+        }
     }
     impl SerializableColumn<Person> for NameColumn {
         fn serialize_cell(&self, row: &Person) -> impl Serialize + '_ {
@@ -244,6 +253,9 @@ mod tests {
             rsx! {
                 td {}
             }
+        }
+        fn compare(&self, a: &Person, b: &Person) -> std::cmp::Ordering {
+            a.age.cmp(&b.age)
         }
     }
     impl SerializableColumn<Person> for AgeColumn {
@@ -319,23 +331,22 @@ mod tests {
 
     #[test]
     fn test_export_empty_table() {
-        test_hook(
+        test_hook_simple(
             || {
                 let context = TableContext::use_table_context((NameColumn, AgeColumn));
                 let rows = Signal::new(Vec::<Person>::new());
-                (context, rows)
-            },
-            |(context, rows), _| {
+
                 let mut exporter = MockExporter::new();
                 context.serialize(rows.into(), &mut exporter).unwrap();
-
+                exporter
+            },
+            |exporter| {
                 assert_eq!(
                     exporter.headers.as_slice(),
                     &[(0, "Name".to_string()), (1, "Age".to_string())]
                 );
                 assert_eq!(exporter.cells.as_slice(), &[]);
             },
-            |_| {},
         );
     }
 
@@ -486,7 +497,7 @@ mod tests {
 
     #[test]
     fn test_export_with_sorted_rows() {
-        test_hook(
+        test_hook_simple(
             || {
                 let context = TableContext::use_table_context((NameColumn, AgeColumn));
                 let rows = Signal::new(vec![
@@ -503,9 +514,7 @@ mod tests {
                         age: 25,
                     },
                 ]);
-                (context, rows)
-            },
-            |(context, rows), _| {
+
                 // Sort by age (column 1) ascending
                 context.data.request_sort(
                     1,
@@ -516,7 +525,9 @@ mod tests {
 
                 let mut exporter = MockExporter::new();
                 context.serialize(rows.into(), &mut exporter).unwrap();
-
+                exporter
+            },
+            |exporter| {
                 assert_eq!(
                     exporter.headers.as_slice(),
                     &[(0, "Name".to_string()), (1, "Age".to_string())]
@@ -534,7 +545,6 @@ mod tests {
                     ]
                 );
             },
-            |_| {},
         );
     }
 
@@ -590,11 +600,11 @@ mod tests {
             |(context, rows), _| {
                 // 1. Hide Priority column
                 context.data.hide_column(2);
-                // 2. Swap Name and Age columns
+                // 2. Swap Name and Age columns (display order becomes Age, Name)
                 context.data.swap_columns(0, 1);
-                // 3. Sort by age ascending (now at column 0 after swap)
+                // 3. Sort by age ascending (original column 1)
                 context.data.request_sort(
-                    0,
+                    1,
                     SortGesture::AddFirst(Sort {
                         direction: SortDirection::Ascending,
                     }),
@@ -617,6 +627,214 @@ mod tests {
                         (1, 1, "\"Alice\"".to_string()),
                         (2, 0, "35".to_string()),
                         (2, 1, "\"Charlie\"".to_string()),
+                    ]
+                );
+            },
+            |_| {},
+        );
+    }
+
+    #[derive(Clone, PartialEq)]
+    struct ExcludedColumn;
+    impl TableColumn<Person> for ExcludedColumn {
+        fn column_name(&self) -> String {
+            "Excluded".to_string()
+        }
+        fn render_header(&self, _context: ColumnContext, _attributes: Vec<Attribute>) -> Element {
+            rsx! {
+                th {}
+            }
+        }
+        fn render_cell(
+            &self,
+            _context: ColumnContext,
+            _row: &Person,
+            _attributes: Vec<Attribute>,
+        ) -> Element {
+            rsx! {
+                td {}
+            }
+        }
+    }
+    impl SerializableColumn<Person> for ExcludedColumn {
+        fn serialize_cell(&self, _row: &Person) -> impl Serialize + '_ {
+            "excluded_value"
+        }
+        fn include_in_export(&self) -> bool {
+            false
+        }
+    }
+
+    #[test]
+    fn test_export_with_include_in_export_false() {
+        test_hook(
+            || {
+                let context = TableContext::use_table_context((NameColumn, ExcludedColumn));
+                let rows = Signal::new(vec![
+                    Person {
+                        name: "Alice".to_string(),
+                        age: 30,
+                    },
+                    Person {
+                        name: "Bob".to_string(),
+                        age: 25,
+                    },
+                ]);
+                (context, rows)
+            },
+            |(context, rows), _| {
+                let mut exporter = MockExporter::new();
+                context.serialize(rows.into(), &mut exporter).unwrap();
+
+                // Only Name column should be exported (ExcludedColumn has include_in_export=false)
+                assert_eq!(exporter.headers.as_slice(), &[(0, "Name".to_string())]);
+                assert_eq!(
+                    exporter.cells.as_slice(),
+                    &[
+                        (0, 0, "\"Alice\"".to_string()),
+                        (1, 0, "\"Bob\"".to_string())
+                    ]
+                );
+            },
+            |_| {},
+        );
+    }
+
+    #[test]
+    fn test_export_with_include_in_export_false_and_hidden_columns() {
+        test_hook(
+            || {
+                let context =
+                    TableContext::use_table_context((NameColumn, AgeColumn, ExcludedColumn));
+                let rows = Signal::new(vec![
+                    Person {
+                        name: "Alice".to_string(),
+                        age: 30,
+                    },
+                    Person {
+                        name: "Bob".to_string(),
+                        age: 25,
+                    },
+                ]);
+                (context, rows)
+            },
+            |(context, rows), _| {
+                // Hide Age column (index 1)
+                context.data.hide_column(1);
+
+                let mut exporter = MockExporter::new();
+                context.serialize(rows.into(), &mut exporter).unwrap();
+
+                // Only Name column should be exported
+                // (Age is hidden, ExcludedColumn has include_in_export=false)
+                assert_eq!(exporter.headers.as_slice(), &[(0, "Name".to_string())]);
+                assert_eq!(
+                    exporter.cells.as_slice(),
+                    &[
+                        (0, 0, "\"Alice\"".to_string()),
+                        (1, 0, "\"Bob\"".to_string())
+                    ]
+                );
+            },
+            |_| {},
+        );
+    }
+
+    #[test]
+    fn test_export_with_include_in_export_false_and_column_reordering() {
+        test_hook(
+            || {
+                let context =
+                    TableContext::use_table_context((NameColumn, ExcludedColumn, AgeColumn));
+                let rows = Signal::new(vec![Person {
+                    name: "Alice".to_string(),
+                    age: 30,
+                }]);
+                (context, rows)
+            },
+            |(context, rows), _| {
+                // Swap columns: Age (index 2) and Name (index 0)
+                context.data.swap_columns(0, 2);
+
+                let mut exporter = MockExporter::new();
+                context.serialize(rows.into(), &mut exporter).unwrap();
+
+                // Age and Name columns should be exported in reordered position
+                // (ExcludedColumn has include_in_export=false)
+                assert_eq!(
+                    exporter.headers.as_slice(),
+                    &[(0, "Age".to_string()), (1, "Name".to_string())]
+                );
+                assert_eq!(
+                    exporter.cells.as_slice(),
+                    &[(0, 0, "30".to_string()), (0, 1, "\"Alice\"".to_string())]
+                );
+            },
+            |_| {},
+        );
+    }
+
+    #[test]
+    fn test_export_with_include_in_export_false_and_combined_features() {
+        test_hook(
+            || {
+                let context = TableContext::use_table_context((
+                    NameColumn,
+                    AgeColumn,
+                    ExcludedColumn,
+                    PriorityColumn,
+                ));
+                let rows = Signal::new(vec![
+                    Person {
+                        name: "Charlie".to_string(),
+                        age: 35,
+                    },
+                    Person {
+                        name: "Alice".to_string(),
+                        age: 30,
+                    },
+                    Person {
+                        name: "Bob".to_string(),
+                        age: 25,
+                    },
+                ]);
+                (context, rows)
+            },
+            |(context, rows), _| {
+                // 1. Hide Name column (index 0)
+                context.data.hide_column(0);
+                // 2. Swap Age (index 1) and Priority (index 3) columns (display order changes)
+                context.data.swap_columns(1, 3);
+                // 3. Sort by age ascending (original column 1)
+                context.data.request_sort(
+                    1,
+                    SortGesture::AddFirst(Sort {
+                        direction: SortDirection::Ascending,
+                    }),
+                );
+
+                let mut exporter = MockExporter::new();
+                context.serialize(rows.into(), &mut exporter).unwrap();
+
+                // Only Priority and Age columns should be exported
+                // (Name is hidden, ExcludedColumn has include_in_export=false)
+                // Priority and Age are swapped, sorted by Age
+                assert_eq!(
+                    exporter.headers.as_slice(),
+                    &[
+                        (0, "Custom Priority Header".to_string()),
+                        (1, "Age".to_string())
+                    ]
+                );
+                assert_eq!(
+                    exporter.cells.as_slice(),
+                    &[
+                        (0, 0, "\"High\"".to_string()),
+                        (0, 1, "25".to_string()),
+                        (1, 0, "\"High\"".to_string()),
+                        (1, 1, "30".to_string()),
+                        (2, 0, "\"High\"".to_string()),
+                        (2, 1, "35".to_string()),
                     ]
                 );
             },

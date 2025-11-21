@@ -195,6 +195,12 @@ impl<R: Row + GetRowData<Title>> TableColumn<R> for TitleColumn {
     }
 }
 
+impl<R: Row + GetRowData<Title>> SerializableColumn<R> for TitleColumn {
+    fn serialize_cell(&self, row: &R) -> impl serde::Serialize + '_ {
+        row.get().0
+    }
+}
+
 #[derive(Clone, PartialEq)]
 pub struct PriorityColumn {
     pub filter: Signal<Option<PriorityFilter>>,
@@ -262,6 +268,12 @@ impl<R: Row + GetRowData<TaskPriority>> TableColumn<R> for PriorityColumn {
     }
 }
 
+impl<R: Row + GetRowData<TaskPriority>> SerializableColumn<R> for PriorityColumn {
+    fn serialize_cell(&self, row: &R) -> impl serde::Serialize + '_ {
+        row.get().0.as_str().to_string()
+    }
+}
+
 #[derive(Clone, PartialEq)]
 pub struct StatusColumn {
     pub filter: Signal<Option<StatusFilter>>,
@@ -325,6 +337,12 @@ impl<R: Row + GetRowData<TaskStatus>> TableColumn<R> for StatusColumn {
 
     fn compare(&self, a: &R, b: &R) -> Ordering {
         a.get().0.cmp(&b.get().0)
+    }
+}
+
+impl<R: Row + GetRowData<TaskStatus>> SerializableColumn<R> for StatusColumn {
+    fn serialize_cell(&self, row: &R) -> impl serde::Serialize + '_ {
+        row.get().0.as_str().to_string()
     }
 }
 
@@ -401,6 +419,57 @@ impl<R: Row + GetRowData<DaysUntil>> TableColumn<R> for DaysColumn {
 
     fn compare(&self, a: &R, b: &R) -> Ordering {
         a.get().0.cmp(&b.get().0)
+    }
+}
+
+impl<R: Row + GetRowData<DaysUntil>> SerializableColumn<R> for DaysColumn {
+    fn serialize_cell(&self, row: &R) -> impl serde::Serialize + '_ {
+        row.get().0
+    }
+}
+
+// ==================== CSV Exporter ====================
+
+struct CsvExporter {
+    output: String,
+}
+
+impl CsvExporter {
+    fn new() -> Self {
+        Self {
+            output: String::new(),
+        }
+    }
+
+    fn finish(self) -> String {
+        self.output
+    }
+}
+
+impl Exporter for CsvExporter {
+    type Error = serde_json::Error;
+
+    fn serialize_header(&mut self, col: usize, header: &str) -> Result<(), Self::Error> {
+        if col != 0 {
+            self.output.push(',');
+        }
+        self.output.push_str(&serde_json::to_string(header)?);
+        Ok(())
+    }
+
+    fn serialize_cell<'a>(
+        &mut self,
+        _row: usize,
+        col: usize,
+        cell: impl serde::Serialize + 'a,
+    ) -> Result<(), Self::Error> {
+        if col == 0 {
+            self.output.push('\n');
+        } else {
+            self.output.push(',');
+        }
+        self.output.push_str(&serde_json::to_string(&cell)?);
+        Ok(())
     }
 }
 
@@ -556,9 +625,57 @@ fn app() -> Element {
 
     let data = use_tabular(columns, rows.into());
 
+    // Export handler
+    let export_csv = move |_| {
+        let mut exporter = CsvExporter::new();
+        if let Ok(()) = data.serialize(&mut exporter) {
+            let csv = exporter.finish();
+            println!("CSV Export:\n{}", csv);
+            // In a real app, you would download this or copy to clipboard
+        }
+    };
+
     rsx! {
         div { style: "font-family: sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px;",
             h1 { "Task Manager Demo" }
+
+            // Controls
+            div { style: "margin: 20px 0; display: flex; gap: 20px; align-items: center; flex-wrap: wrap;",
+                // Column Visibility Toggles
+                div { style: "display: flex; gap: 10px; align-items: center;",
+                    span { style: "font-weight: bold;", "Columns:" }
+                    for header in data.context.all_headers::<Task>() {
+                        {
+                            let col_ctx = header.column_context();
+                            rsx! {
+                                label {
+                                    key: "{header.key()}",
+                                    style: "display: flex; align-items: center; gap: 5px; cursor: pointer;",
+                                    input {
+                                        r#type: "checkbox",
+                                        checked: col_ctx.is_visible(),
+                                        onchange: move |e| {
+                                            if e.checked() {
+                                                col_ctx.show(None);
+                                            } else {
+                                                col_ctx.hide();
+                                            }
+                                        },
+                                    }
+                                    "{header.key()}"
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Export Button
+                button {
+                    style: "padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;",
+                    onclick: export_csv,
+                    "Export CSV"
+                }
+            }
 
             // Table
             div { style: "overflow-x: auto;",
