@@ -586,6 +586,11 @@ impl<C: Columns<R>, R: Row> Clone for RowData<C, R> {
 }
 
 impl<C: Columns<R>, R: Row> RowData<C, R> {
+    /// Returns the original index of this row.
+    pub fn index(&self) -> usize {
+        self.index
+    }
+
     /// Returns the unique key for this row.
     pub fn key(&self) -> String {
         self.rows.read()[self.index].key().into()
